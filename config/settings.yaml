@@ -17,6 +17,7 @@ screenshots:
   hourly_capture: true          # broader structure context, once per hour
   interval_minutes: 15          # finer capture cadence during the session
   save_dir: "screenshots"
+  tradingview_chart_url: ""   # paste your saved chart layout URL here once you have it
 
 # ── FVG Detection (Phase 3) ────────────────────────────────────────
 fvg:
