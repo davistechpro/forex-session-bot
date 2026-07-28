@@ -1,5 +1,5 @@
 """
-PHASE 2 — Market Data Connection v2 (real implementation)
+PHASE 2 — Market Data Connection (real implementation)
 
 Pulls candle data from OANDA's REST API and computes precise NY-session
 high/low from real price data — not estimated from a screenshot.
