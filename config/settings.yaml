@@ -1,0 +1,42 @@
+# ── Session Settings ──────────────────────────────────────────────
+# All times are US/Eastern. The bot should not do anything outside this window.
+session:
+  timezone: "America/New_York"
+  start_time: "09:00"
+  end_time: "12:00"
+  trading_days: ["Mon", "Tue", "Wed", "Thu", "Fri"]
+
+# ── Instrument ─────────────────────────────────────────────────────
+instrument:
+  pair: "EUR_USD"          # OANDA-style symbol
+  entry_timeframes: ["M5", "M15"]
+  context_timeframe: "H1"
+
+# ── Screenshot Capture ───────────────────────────────────────────
+screenshots:
+  hourly_capture: true          # broader structure context, once per hour
+  interval_minutes: 15          # finer capture cadence during the session
+  save_dir: "screenshots"
+
+# ── FVG Detection (Phase 3) ────────────────────────────────────────
+fvg:
+  min_gap_pips: 2               # ignore negligible/noise-level gaps
+  lookback_candles: 200
+
+# ── Risk Rules (Phase 6 — hard limits, not suggestions) ────────────
+risk:
+  max_position_size_units: 1000
+  stop_loss_pips: 15
+  daily_loss_cap_pips: 40
+  max_trades_per_session: 3
+
+# ── AI Model (Phase 5) ──────────────────────────────────────────────
+ai:
+  provider: "anthropic"         # "anthropic" or "openai"
+  model: "claude-sonnet-4-6"
+  temperature: 0.0              # deterministic, structured output preferred
+
+# ── Logging ──────────────────────────────────────────────────────
+logging:
+  log_dir: "logs"
+  level: "INFO"
