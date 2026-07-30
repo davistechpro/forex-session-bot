@@ -48,7 +48,16 @@ def capture_chart(pair: str, timeframe: str) -> Path:
     filename = SAVE_DIR / f"{pair}_{timeframe}_{timestamp}.png"
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        # Use real Chrome (channel="chrome"), same as save_tradingview_session.py.
+        # Using Playwright's bundled test Chromium here instead would present a
+        # different browser fingerprint than the one the session was saved
+        # under, which can cause TradingView/Google to reject the saved
+        # session and force a fresh login.
+        browser = p.chromium.launch(
+            headless=True,
+            channel="chrome",
+            args=["--disable-blink-features=AutomationControlled"],
+        )
         context = browser.new_context(storage_state=str(SESSION_FILE))
         page = context.new_page()
         page.goto(CHART_URL)
