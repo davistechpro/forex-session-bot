@@ -1,16 +1,16 @@
 # Core
-python-dotenv==1.0.1
-pyyaml==6.0.1
+python-dotenv
+pyyaml
 # Data handling
-pandas==2.2.2
+pandas
 # Broker connectivity (OANDA)
-oandapyV20==0.7.2
+oandapyV20
 requests
 # AI models
-anthropic==0.34.0
-openai==1.40.0
+anthropic
+openai
 # Dashboard
-streamlit==1.37.0
-mplfinance==0.12.10b0
+streamlit
+mplfinance
 # Timezones
-pytz==2024.1
+pytz
