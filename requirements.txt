@@ -1,0 +1,16 @@
+# Core
+python-dotenv
+pyyaml
+# Data handling
+pandas
+# Broker connectivity (OANDA)
+oandapyV20
+requests
+# AI models
+anthropic
+openai
+# Dashboard
+streamlit
+mplfinance
+# Timezones
+pytz
