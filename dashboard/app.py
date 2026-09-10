@@ -108,7 +108,7 @@ if "last_results" in st.session_state:
             if direction:
                 st.write(f"**Valid direction:** {direction.upper()} (per {result['deciding_tf']})")
             else:
-                st.write("**No valid direction** — both 4H and 1H unclear")
+                st.write("**No valid direction** - no 2-of-3 agreement across Daily/4H/1H")
 
             zone = result.get("zone")
             if zone:

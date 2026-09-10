@@ -30,7 +30,7 @@ def print_scan(pair: str):
     if result["valid_direction"]:
         print(f"\n>>> Valid direction: {result['valid_direction'].upper()} (per {result['deciding_tf']})")
     else:
-        print("\n>>> No valid direction — both 4H and 1H unclear. NO TRADE.")
+        print("\n>>> No valid direction - no 2-of-3 agreement across Daily/4H/1H. NO TRADE.")
         return
 
     print("\n--- STEP 2: ZONE ---")
@@ -55,8 +55,12 @@ def print_scan(pair: str):
             print(f"  Broke out at:  {entry['breakout_time']}")
         print(f"  Entry at:      {entry['time']}")
         print(f"Candle: O{c['open']:.5f} H{c['high']:.5f} L{c['low']:.5f} C{c['close']:.5f}")
-        print(f"\n>>> TRADE: {entry['direction']} @ {entry['entry_price']:.5f}")
-        print(f">>> SL: {entry['stop_loss']:.5f}  TP: {entry['take_profit']:.5f}")
+        lvl = {"H4": "4H", "H1": "1H", "15": "15m", "5": "5m", "1": "1m"}.get(entry.get("entry_level", ""), entry.get("entry_level", entry["source_tf"]))
+        print(f"\n>>> TRADE: {entry['direction']} @ {entry['entry_price']:.5f}  (entry off the {lvl} level)")
+        print(f">>> SL: {entry['stop_loss']:.5f} ({entry.get('sl_pips', 8)} pips)  TP: {entry['take_profit']:.5f} ({entry.get('tp_pips', 16)} pips, 2R)")
+        if entry.get("ladder"):
+            names = {"H1": "1H", "15": "15m", "5": "5m", "1": "1m"}
+            print("    nested ladder: " + "  ->  ".join(f"{names.get(tf, tf)} {px:.5f}" for tf, px in entry["ladder"]))
     else:
         print("\nNo valid entry sequence found yet. NO TRADE.")
 
@@ -74,3 +78,4 @@ def print_scan(pair: str):
 if __name__ == "__main__":
     pair = sys.argv[1] if len(sys.argv) > 1 else settings["instrument"]["pair"]
     print_scan(pair)
+

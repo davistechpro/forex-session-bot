@@ -1,17 +1,12 @@
 """
-Chart Renderer — draws OANDA candles with code-detected supply/demand
-zones overlaid, using mplfinance.
+Chart Renderer — OANDA candles with supply/demand zones and a
+TradingView-style long/short position box.
 
-1H and 15m zones are drawn as filled boxes (their full origin-candle
-range), color-coded blue and red respectively.
-
-5m and 1m zones are drawn as single horizontal LINES instead of boxes,
-matching the TradingView indicator's treatment of lower timeframes: a
-supply line sits at the origin candle's LOW (bottom of its wick), a
-demand line sits at the origin candle's HIGH (top of its wick).
-
-All zones extend the full chart width for readability -- mitigation
-status is conveyed by transparency, not by cutting the box short.
+1H and 15m zones draw as filled boxes (blue / red).
+5m and 1m zones draw as horizontal LINES (orange / black) at the origin
+candle's wick -- supply at its low, demand at its high.
+Trades draw as a shaded risk box (entry->SL, red) and reward box
+(entry->TP, green) with pip distances and R:R.
 """
 from pathlib import Path
 import pandas as pd
@@ -58,6 +53,7 @@ def render_chart(
     save_path: Path,
     title: str = "",
     rejections: list = None,
+    trade: dict = None,
 ):
     df = candles.copy()
     df["time"] = pd.to_datetime(df["time"])
@@ -147,6 +143,64 @@ def render_chart(
             y = row["high"] * 1.0005 if r["direction"] == "bearish" else row["low"] * 0.9995
             ax.scatter([x], [y], marker="*", s=250, color=marker_color, zorder=5, edgecolors="black")
             ax.text(x, y, f"  REJECT ({int(r['volume'])} vol)", fontsize=7, color=marker_color, va="center")
+
+    # --- Trade position box (TradingView long/short tool style) ---
+    if trade:
+        entry_price = trade.get("entry_price")
+        sl = trade.get("stop_loss")
+        tp = trade.get("take_profit")
+        direction = trade.get("direction", "")
+
+        if entry_price is not None and sl is not None and tp is not None:
+            try:
+                x_box_start = _x_for(trade["time"]) if trade.get("time") else 0
+            except Exception:
+                x_box_start = 0
+            x_box_end = x_max + 2
+
+            ax.fill_betweenx(
+                sorted([entry_price, sl]),
+                x_box_start, x_box_end,
+                color="red", alpha=0.13, zorder=2,
+            )
+            ax.fill_betweenx(
+                sorted([entry_price, tp]),
+                x_box_start, x_box_end,
+                color="green", alpha=0.13, zorder=2,
+            )
+
+            ax.hlines(sl, x_box_start, x_box_end, color="red",
+                      linewidth=1.3, linestyle="--", alpha=0.9, zorder=6)
+            ax.hlines(tp, x_box_start, x_box_end, color="green",
+                      linewidth=1.3, linestyle="--", alpha=0.9, zorder=6)
+            ax.hlines(entry_price, x_box_start, x_box_end, color="black",
+                      linewidth=1.8, alpha=0.95, zorder=7)
+
+            pip_size = 0.01 if entry_price > 20 else 0.0001
+            risk_pips = abs(entry_price - sl) / pip_size
+            reward_pips = abs(tp - entry_price) / pip_size
+            rr = (reward_pips / risk_pips) if risk_pips else 0
+
+            fmt = "{:.3f}" if pip_size == 0.01 else "{:.5f}"
+
+            ax.text(x_box_end, entry_price,
+                    f"  {direction} @ {fmt.format(entry_price)}",
+                    fontsize=10, color="black", fontweight="bold",
+                    va="center", ha="left", zorder=8)
+            ax.text(x_box_end, sl,
+                    f"  SL {fmt.format(sl)}  (-{risk_pips:.0f} pips)",
+                    fontsize=9, color="red", fontweight="bold",
+                    va="center", ha="left", zorder=8)
+            ax.text(x_box_end, tp,
+                    f"  TP {fmt.format(tp)}  (+{reward_pips:.0f} pips)",
+                    fontsize=9, color="green", fontweight="bold",
+                    va="center", ha="left", zorder=8)
+
+            mid_reward = (entry_price + tp) / 2
+            ax.text((x_box_start + x_box_end) / 2, mid_reward,
+                    f"{rr:.1f}R",
+                    fontsize=13, color="darkgreen", fontweight="bold",
+                    alpha=0.55, va="center", ha="center", zorder=8)
 
     save_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(save_path, dpi=120, bbox_inches="tight")

@@ -1,18 +1,13 @@
 """
-Scan Engine — trend hierarchy, zone ID, and entry check.
+Scan Engine — trend agreement, zone ID, and entry/stop cascade.
 
-ENTRY LOGIC:
-  - 1H zone, within 6:00 AM-1:00 PM ET, ORIGIN ON THE SAME CALENDAR DAY
-    as "now": simple wick tap = entry. Once that day's 1pm window closes,
-    the zone is dead -- it does NOT carry into tonight or tomorrow.
-  - 1H zone formed outside that same-day window: requires the full
-    1-minute confirmation sequence.
-  - 4H zone, ANY time: always requires the full confirmation sequence.
+TREND: requires 2-of-3 agreement across Daily / 4H / 1H.
 
-Renders TWO charts:
-  1. Today's 6am-1pm ET session view (1H containers + nested 15m/5m/1m)
-  2. A 1H-resolution view of whatever zone actually produced the trade
-     decision, regardless of timeframe or when it happened.
+ENTRY + STOP CASCADE:
+  - Enter at the most refined nested level (15m first, then 5m, then 1m).
+  - Stop must clear the NEXT nested level: try 8 pips, then 10. If 10
+    still does not clear it, drop the entry down to that level and repeat.
+  - 1m is the floor (plain 8-pip stop). TP is always 2R.
 """
 from datetime import datetime
 from pathlib import Path
@@ -44,11 +39,8 @@ def is_ny_session_now() -> dict:
 
 
 def _is_same_day_session_zone(zone, reference_time) -> bool:
-    """Zone origin formed 6:00 AM-1:00 PM ET on the SAME calendar day as
-    reference_time. A zone from a different day does NOT count."""
     origin_ny = zone["origin_time"].tz_convert(NY_TZ) if zone["origin_time"].tzinfo else NY_TZ.localize(zone["origin_time"])
     ref_ny = reference_time.tz_convert(NY_TZ) if reference_time.tzinfo else NY_TZ.localize(reference_time)
-
     same_day = origin_ny.date() == ref_ny.date()
     t = origin_ny.time()
     in_window = (t.hour, t.minute) >= (6, 0) and (t.hour, t.minute) < (13, 0)
@@ -56,8 +48,6 @@ def _is_same_day_session_zone(zone, reference_time) -> bool:
 
 
 def _is_same_day_narrow_window_zone(zone, reference_time) -> bool:
-    """Same as above but the tighter 6am-12pm ET window, used for the
-    chart display."""
     origin_ny = zone["origin_time"].tz_convert(NY_TZ) if zone["origin_time"].tzinfo else NY_TZ.localize(zone["origin_time"])
     ref_ny = reference_time.tz_convert(NY_TZ) if reference_time.tzinfo else NY_TZ.localize(reference_time)
     same_day = origin_ny.date() == ref_ny.date()
@@ -67,10 +57,6 @@ def _is_same_day_narrow_window_zone(zone, reference_time) -> bool:
 
 
 def _extreme_nested_zone(zones: list, container_zone: dict):
-    """From `zones`, return the ONE nested inside container_zone's price
-    range (same type) that is most extreme in that zone's direction --
-    highest top for supply, lowest bottom for demand. Runs PER container
-    zone, so each 1H zone gets its own nested pick."""
     nested = [
         z for z in zones
         if z["type"] == container_zone["type"]
@@ -82,6 +68,73 @@ def _extreme_nested_zone(zones: list, container_zone: dict):
         return max(nested, key=lambda z: z["top"])
     else:
         return min(nested, key=lambda z: z["bottom"])
+
+
+def _level_price(zone: dict, zone_type: str) -> float:
+    """Supply is hit from below -> entry at its bottom. Demand from above -> top."""
+    return zone["bottom"] if zone_type == "supply" else zone["top"]
+
+
+def _plan_trade(container: dict, ladder: list, zone_type: str, pip: float) -> dict:
+    """
+    ladder = nested zones below the container, most-refined LAST,
+             e.g. [15m, 5m, 1m]. Only levels that exist are included.
+
+    Enter at ladder[0] (or the container edge if the ladder is empty).
+    The stop must clear the NEXT ladder level: try 8 pips, then 10. If
+    10 still does not clear it, drop the entry to that level and repeat.
+    The last level gets a plain 8-pip stop. TP is always 2R.
+    """
+    sl_candidates = (8, 10)
+
+    if not ladder:
+        entry = _level_price(container, zone_type)
+        sl_pips = 8
+        level_name = container.get("timeframe", "?")
+    else:
+        idx = 0
+        while True:
+            level = ladder[idx]
+            entry = _level_price(level, zone_type)
+            level_name = level.get("timeframe", "?")
+            nxt = ladder[idx + 1] if idx + 1 < len(ladder) else None
+
+            if nxt is None:
+                sl_pips = 8
+                break
+
+            nxt_price = _level_price(nxt, zone_type)
+            chosen = None
+            for cand in sl_candidates:
+                if zone_type == "supply":
+                    if entry + cand * pip >= nxt_price:
+                        chosen = cand
+                        break
+                else:
+                    if entry - cand * pip <= nxt_price:
+                        chosen = cand
+                        break
+
+            if chosen is not None:
+                sl_pips = chosen
+                break
+            idx += 1
+
+    if zone_type == "supply":
+        sl = entry + sl_pips * pip
+        tp = entry - 2 * sl_pips * pip
+    else:
+        sl = entry - sl_pips * pip
+        tp = entry + 2 * sl_pips * pip
+
+    return {
+        "entry_price": entry,
+        "stop_loss": sl,
+        "take_profit": tp,
+        "sl_pips": sl_pips,
+        "tp_pips": 2 * sl_pips,
+        "entry_level": level_name,
+    }
 
 
 def _check_wick_tap_entry(m5_candles, m15_candles, zone, zone_type):
@@ -123,12 +176,22 @@ def run_scan(pair: str, render_chart_image: bool = True) -> dict:
     result["h4_trend"] = h4_trend
     result["h1_trend"] = h1_trend
 
-    if h4_trend["trend"] != "unclear":
-        valid_direction = h4_trend["trend"]
-        deciding_tf = "4H"
-    elif h1_trend["trend"] != "unclear":
-        valid_direction = h1_trend["trend"]
-        deciding_tf = "1H (4H was unclear)"
+    votes = [daily_trend["trend"], h4_trend["trend"], h1_trend["trend"]]
+    bullish_votes = votes.count("bullish")
+    bearish_votes = votes.count("bearish")
+
+    if bullish_votes >= 2:
+        valid_direction = "bullish"
+        agreeing = [name for name, t in
+                    [("Daily", daily_trend["trend"]), ("4H", h4_trend["trend"]), ("1H", h1_trend["trend"])]
+                    if t == "bullish"]
+        deciding_tf = f"{bullish_votes}-of-3 agree ({'+'.join(agreeing)})"
+    elif bearish_votes >= 2:
+        valid_direction = "bearish"
+        agreeing = [name for name, t in
+                    [("Daily", daily_trend["trend"]), ("4H", h4_trend["trend"]), ("1H", h1_trend["trend"])]
+                    if t == "bearish"]
+        deciding_tf = f"{bearish_votes}-of-3 agree ({'+'.join(agreeing)})"
     else:
         valid_direction = None
         deciding_tf = None
@@ -200,21 +263,28 @@ def run_scan(pair: str, render_chart_image: bool = True) -> dict:
     result["zone_source_tf"] = zone_source_tf
 
     if entry:
-        pip = 0.0001
-        entry_price = entry["entry_price"]
-        if valid_direction == "bearish":
-            sl = entry_price + 8 * pip
-            tp = entry_price - 16 * pip
-        else:
-            sl = entry_price - 8 * pip
-            tp = entry_price + 16 * pip
+        pip = 0.01 if "JPY" in pair.upper() else 0.0001
+
+        candle_pools = {"H4": h4, "H1": h1, "15": m15, "5": m5, "1": m1}
+        tf_order = ["H4", "H1", "15", "5", "1"]
+        container_idx = tf_order.index(zone_source_tf if zone_source_tf in tf_order else "H1")
+        ladder = []
+        for tf_name in tf_order[container_idx + 1:]:
+            pool = [z for z in detect_zones(candle_pools[tf_name], tf_name) if not z["mitigated"]]
+            pick = _extreme_nested_zone(pool, zone_used)
+            if pick:
+                ladder.append(pick)
+
+        plan = _plan_trade(zone_used, ladder, zone_type_needed, pip)
 
         c = entry["entry_candle"]
         result["entry"] = {
             "source_tf": zone_source_tf, "method": entry_method, "time": entry["entry_time"],
             "candle": {"open": c["open"], "high": c["high"], "low": c["low"], "close": c["close"]},
             "direction": "SHORT" if valid_direction == "bearish" else "LONG",
-            "entry_price": entry_price, "stop_loss": sl, "take_profit": tp,
+            "entry_price": plan["entry_price"], "stop_loss": plan["stop_loss"], "take_profit": plan["take_profit"],
+            "sl_pips": plan["sl_pips"], "tp_pips": plan["tp_pips"], "entry_level": plan["entry_level"],
+            "ladder": [(z.get("timeframe"), _level_price(z, zone_type_needed)) for z in ladder],
             "confirm_time": entry.get("confirm_time"), "breakout_time": entry.get("breakout_time"),
         }
         result["entry_method"] = entry_method
@@ -222,7 +292,6 @@ def run_scan(pair: str, render_chart_image: bool = True) -> dict:
     if render_chart_image:
         out_dir = Path("rendered_charts")
 
-        # Chart 1: today's 6am-1pm ET session (active zones only)
         try:
             h1_zones_for_chart = [
                 z for z in detect_zones(h1, "H1")
@@ -254,12 +323,12 @@ def run_scan(pair: str, render_chart_image: bool = True) -> dict:
             out_path = out_dir / f"{pair}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
             if len(m5_window) > 0:
                 render_chart(m5_window, zones_for_chart, [], out_path,
-                             title=f"{pair} -- 6am-1pm ET session only")
+                             title=f"{pair} -- 6am-1pm ET session only",
+                             trade=result["entry"])
                 result["chart_path"] = out_path
         except Exception as e:
             print(f"DEBUG: session chart render failed with: {e}")
 
-        # Chart 2: 1H view of whatever zone actually produced the trade
         try:
             if zone_used:
                 candle_pools = {"H4": h4, "H1": h1, "15": m15, "5": m5, "1": m1}
@@ -280,7 +349,8 @@ def run_scan(pair: str, render_chart_image: bool = True) -> dict:
                 out_path_1h = out_dir / f"{pair}_1H_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
                 if len(h1_window) > 0:
                     render_chart(h1_window, zones_1h_chart, [], out_path_1h,
-                                 title=f"{pair} 1H candles -- {zone_source_tf} {zone_type_needed.upper()} setup")
+                                 title=f"{pair} 1H candles -- {zone_source_tf} {zone_type_needed.upper()} setup",
+                                 trade=result["entry"])
                     result["chart_path_1h"] = out_path_1h
         except Exception as e:
             print(f"DEBUG: 1H chart render failed with: {e}")
