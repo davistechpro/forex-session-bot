@@ -1,26 +1,33 @@
 """
 Confirmation-Sequence Entry Logic
 
-Per the strategy: a 4H zone (always) or a 1H zone occurring OUTSIDE the
-6:00 AM-12:00 PM ET window requires this exact sequence on the 1-minute
-chart before an entry is valid:
+Per the strategy, a 4H zone (always) or an off-window 1H zone requires
+this sequence on the 1-minute chart before an entry is valid:
 
-  1. Price hits the higher-timeframe zone
-  2. A 1-minute candle's BODY closes within that zone
-  3. Price then BREAKS OUT -- a later 1m candle closes beyond the zone
-     in the anticipated trade direction
-  4. Price RETURNS to tag the zone again -- THAT return is the entry
-     trigger, at the zone's edge
+  1. A 1-minute candle BODY closes within the zone
+  2. Price BREAKS OUT -- a later 1m candle closes beyond the zone
+  3. Price RETURNS to tag the zone again -- that return is the trigger
 """
 import pandas as pd
 
 
-def find_confirmation_entry(m1_candles: pd.DataFrame, zone: dict, zone_type: str):
+def find_confirmation_entry(m1_candles: pd.DataFrame, zone: dict, zone_type: str,
+                            max_age_minutes: int = None):
+    """
+    max_age_minutes: if set, the ENTRY trigger must have occurred within
+    this many minutes of the most recent candle. Without it the scan
+    returns the first valid sequence anywhere in the M1 history, which
+    surfaces stale overnight setups as if they were live.
+    """
     m1_candles = m1_candles.reset_index(drop=True)
     after_zone = m1_candles[m1_candles["time"] > zone["confirmed_time"]].reset_index(drop=True)
 
     if len(after_zone) == 0:
         return None
+
+    cutoff = None
+    if max_age_minutes is not None and len(m1_candles) > 0:
+        cutoff = m1_candles["time"].max() - pd.Timedelta(minutes=max_age_minutes)
 
     confirm_idx = None
     for idx, c in after_zone.iterrows():
@@ -62,6 +69,11 @@ def find_confirmation_entry(m1_candles: pd.DataFrame, zone: dict, zone_type: str
         return None
 
     entry_candle = after_zone.iloc[entry_idx]
+
+    # Reject stale sequences -- the trigger has to be recent to be actionable.
+    if cutoff is not None and entry_candle["time"] < cutoff:
+        return None
+
     entry_price = zone["top"] if zone_type == "demand" else zone["bottom"]
 
     return {

@@ -8,3 +8,6 @@ data/*.csv
 logs/*.log
 auth/
 .streamlit/
+rendered_charts/*.png
+alert_state.json
+alert_state_dryrun.json
