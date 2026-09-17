@@ -29,6 +29,10 @@ NY_TZ = pytz.timezone("America/New_York")
 # A nested 15m/5m/1m level only counts if within this many pips of entry.
 MAX_NEST_DISTANCE_PIPS = 20
 
+# Zones must be touching to count as one cluster -- how many pips of
+# gap still counts as `touching`.
+TOUCH_TOLERANCE_PIPS = 2
+
 # Confirmation sequence must have triggered within this many minutes.
 MAX_ENTRY_AGE_MINUTES = 120
 
@@ -92,73 +96,76 @@ def _level_price(zone: dict, zone_type: str) -> float:
     return zone["bottom"] if zone_type == "supply" else zone["top"]
 
 
+def _zone_height(zone) -> float:
+    return zone["top"] - zone["bottom"]
+
+
 def _plan_trade(container: dict, ladder: list, zone_type: str, pip: float) -> dict:
     """
-    ladder = nested zones below the container, most-refined LAST,
-             e.g. [15m, 5m, 1m]. Only levels that exist are included.
+    ENTRY ZONE: whichever nested zone price reaches FIRST.
+      SUPPLY sits above price -- a rally touches the LOWEST one first.
+      DEMAND sits below price -- a drop touches the HIGHEST one first.
+    Every other zone in the cluster is confluence only and never moves
+    the entry. The container (1H/4H) is context; it becomes the entry
+    only when nothing is nested inside it.
 
-    Enter at ladder[0] (or the container edge if the ladder is empty).
+    STOP: sized against the ENTRY ZONE'S OWN HEIGHT.
+      8 pips if that covers the whole zone,
+      10 if 8 does not but 10 does,
+      NO TRADE if even 10 cannot cover it.
 
-    The stop must clear the next DEEPER level -- but only levels that sit
-    on the protective side of the entry count. For a SHORT (supply), that
-    means levels ABOVE the entry; for a LONG (demand), levels BELOW it. A
-    nested level already on the far side has been passed and needs no
-    protection, so it is skipped rather than compared against.
-
-    For each qualifying level: try an 8-pip stop, then 10. If 10 still
-    does not clear it, drop the entry down to that level and repeat.
-    The deepest level gets a plain 8-pip stop. TP is always 2R.
+    TP: always 2R.
     """
-    sl_candidates = (8, 10)
-
-    def _beyond(price: float, entry: float) -> bool:
-        return price > entry if zone_type == "supply" else price < entry
-
-    if not ladder:
-        entry = _level_price(container, zone_type)
-        sl_pips = 8
-        level_name = container.get("timeframe", "?")
+    # Cluster membership: zones must be LITERALLY TOUCHING, not merely
+    # within 20 pips. The loose rule let stray 1m zones drift into the
+    # cluster and -- since the first-touched zone wins -- take the entry.
+    inside = [
+        z for z in ladder
+        if not (z["top"] < container["bottom"] or container["top"] < z["bottom"])
+    ]
+    if inside:
+        tol = TOUCH_TOLERANCE_PIPS * pip
+        # Seed on the HIGHEST timeframe present (the structural zone),
+        # then grow outward accepting only zones that touch the cluster.
+        rank = {"15": 0, "M15": 0, "5": 1, "M5": 1, "1": 2, "M1": 2}
+        inside.sort(key=lambda z: rank.get(z.get("timeframe", ""), 9))
+        candidates = [inside[0]]
+        lo, hi = candidates[0]["bottom"], candidates[0]["top"]
+        for z in inside[1:]:
+            if z["bottom"] <= hi + tol and z["top"] >= lo - tol:
+                candidates.append(z)
+                lo, hi = min(lo, z["bottom"]), max(hi, z["top"])
     else:
-        idx = 0
-        while True:
-            level = ladder[idx]
-            entry = _level_price(level, zone_type)
-            level_name = level.get("timeframe", "?")
+        candidates = [container]
 
-            deeper = [
-                _level_price(z, zone_type)
-                for z in ladder[idx + 1:]
-                if _beyond(_level_price(z, zone_type), entry)
-                and abs(_level_price(z, zone_type) - entry) <= MAX_NEST_DISTANCE_PIPS * pip
-            ]
+    # Highest timeframe always takes the entry: 15m beats 5m beats 1m,
+    # regardless of stacking position. First-touched only breaks ties
+    # between zones of the SAME timeframe -- supply is reached from
+    # below (lowest first), demand from above (highest first).
+    tf_rank = {"H1": -1, "15": 0, "M15": 0, "5": 1, "M5": 1, "1": 2, "M1": 2}
+    best_rank = min(tf_rank.get(z.get("timeframe", ""), 9) for z in candidates)
+    eligible = [z for z in candidates
+                if tf_rank.get(z.get("timeframe", ""), 9) == best_rank]
 
-            if not deeper:
-                sl_pips = 8
-                break
+    if zone_type == "supply":
+        entry_zone = min(eligible, key=lambda z: z["bottom"])
+    else:
+        entry_zone = max(eligible, key=lambda z: z["top"])
 
-            target = max(deeper) if zone_type == "supply" else min(deeper)
+    entry = _level_price(entry_zone, zone_type)
+    height_pips = _zone_height(entry_zone) / pip
 
-            chosen = None
-            for cand in sl_candidates:
-                sl_try = entry + cand * pip if zone_type == "supply" else entry - cand * pip
-                if _beyond(sl_try, target) or sl_try == target:
-                    chosen = cand
-                    break
-
-            if chosen is not None:
-                sl_pips = chosen
-                break
-
-            nxt_idx = next(
-                (j for j in range(idx + 1, len(ladder))
-                 if _beyond(_level_price(ladder[j], zone_type), entry)
-                 and abs(_level_price(ladder[j], zone_type) - entry) <= MAX_NEST_DISTANCE_PIPS * pip),
-                None,
-            )
-            if nxt_idx is None:
-                sl_pips = 8
-                break
-            idx = nxt_idx
+    if height_pips <= 8:
+        sl_pips = 8
+    elif height_pips <= 10:
+        sl_pips = 10
+    else:
+        return {
+            "skip": True,
+            "reason": f"zone is {height_pips:.1f} pips tall; a 10-pip stop cannot cover it",
+            "entry_level": entry_zone.get("timeframe"),
+            "zone_height_pips": height_pips,
+        }
 
     if zone_type == "supply":
         sl = entry + sl_pips * pip
@@ -168,12 +175,15 @@ def _plan_trade(container: dict, ladder: list, zone_type: str, pip: float) -> di
         tp = entry + 2 * sl_pips * pip
 
     return {
+        "skip": False,
         "entry_price": entry,
         "stop_loss": sl,
         "take_profit": tp,
         "sl_pips": sl_pips,
         "tp_pips": 2 * sl_pips,
-        "entry_level": level_name,
+        "entry_level": entry_zone.get("timeframe"),
+        "zone_height_pips": height_pips,
+        "confluence": [z.get("timeframe") for z in candidates if z is not entry_zone],
     }
 
 
@@ -335,6 +345,10 @@ def run_scan(pair: str, render_chart_image: bool = True) -> dict:
 
         plan = _plan_trade(zone_used, ladder, zone_type_needed, pip)
 
+        if plan.get("skip"):
+            result["skip_reason"] = plan["reason"]
+            return result
+
         c = entry["entry_candle"]
         result["entry"] = {
             "source_tf": zone_source_tf, "method": entry_method, "time": entry["entry_time"],
@@ -342,7 +356,7 @@ def run_scan(pair: str, render_chart_image: bool = True) -> dict:
             "direction": "SHORT" if valid_direction == "bearish" else "LONG",
             "entry_price": plan["entry_price"], "stop_loss": plan["stop_loss"], "take_profit": plan["take_profit"],
             "sl_pips": plan["sl_pips"], "tp_pips": plan["tp_pips"], "entry_level": plan["entry_level"],
-            "ladder": [(z.get("timeframe"), _level_price(z, zone_type_needed)) for z in ladder],
+            "confluence": plan.get("confluence", []),
             "confirm_time": entry.get("confirm_time"), "breakout_time": entry.get("breakout_time"),
         }
         result["entry_method"] = entry_method
@@ -414,6 +428,12 @@ def run_scan(pair: str, render_chart_image: bool = True) -> dict:
             print(f"DEBUG: 1H chart render failed with: {e}")
 
     return result
+
+
+
+
+
+
 
 
 

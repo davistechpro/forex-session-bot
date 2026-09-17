@@ -1,6 +1,7 @@
 """
-Watcher — scans all pairs on a loop and alerts via Telegram when a NEW
-trade signal appears. Deduplicates so the same setup only fires once.
+Watcher — scans all pairs and alerts via Telegram when a NEW trade
+signal appears. Sends the chart with the alert as its caption, with
+Valid/Invalid vote buttons attached.
 
   python watch.py                  # loop forever, 5-minute interval
   python watch.py --once           # single pass (for cron)
@@ -15,6 +16,9 @@ from datetime import datetime
 from pathlib import Path
 
 import pytz
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from modules.scan_engine import run_scan, is_ny_session_now
 from modules import notifier
@@ -54,13 +58,14 @@ def save_state(state: dict, dry_run: bool = False):
 def signal_id(pair: str, result: dict) -> str:
     entry = result["entry"]
     zone = result["zone"]
+    # Key on the ZONE only -- pair, direction and which zone fired. A
+    # later re-trigger on the same zone (different refinement level or
+    # entry price) is the SAME setup and must not alert twice.
     return "|".join([
         pair,
         entry["direction"],
         str(zone["origin_time"]),
         f"{zone['bottom']:.5f}-{zone['top']:.5f}",
-        f"{entry['entry_price']:.5f}",
-        str(entry.get("entry_level", "")),
     ])
 
 
@@ -96,11 +101,36 @@ def scan_pass(pairs, state, dry_run=False) -> int:
             sent_count += 1
             continue
 
-        if notifier.send_message(text):
+        # Only render a chart for pairs that actually signalled, so the
+        # sweep stays fast for the ones that do not.
+        chart = None
+        try:
+            full = run_scan(pair, render_chart_image=True)
+            chart = full.get("chart_path_1h") or full.get("chart_path")
+        except Exception as ex:
+            print(f"  {pair}: chart render failed ({ex}) -- sending text only")
+
+        e, z = result["entry"], result["zone"]
+        notifier.remember_signal(notifier.short_token(sid), {
+            "pair": pair,
+            "direction": e["direction"],
+            "entry_price": e["entry_price"],
+            "entry_level": e.get("entry_level", ""),
+            "sl_pips": e.get("sl_pips", ""),
+            "method": e.get("method", ""),
+            "trend": result.get("deciding_tf", ""),
+            "zone": f"{z['type'].upper()} {z['bottom']}-{z['top']} ({result['zone_source_tf']})",
+            "triggered_at": str(e.get("time", "")),
+        })
+
+        ok = (notifier.send_photo(chart, text, signal_id=sid) if chart
+              else notifier.send_message(text, signal_id=sid))
+
+        if ok:
             state["sent"].append(sid)
-            save_state(state)
+            save_state(state, dry_run=False)
             sent_count += 1
-            print("  alert sent")
+            print("  alert sent" + (" with chart" if chart else " (text only)"))
         else:
             print("  alert FAILED to send -- will retry next pass")
 
@@ -145,8 +175,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
 

@@ -1,0 +1,361 @@
+{
+  "2e4b6e2c": {
+    "pair": "EUR_JPY",
+    "direction": "LONG",
+    "entry_price": 179.0,
+    "entry_level": "15",
+    "sl_pips": 8,
+    "method": "confirmation_sequence",
+    "trend": "3-of-3 agree (Daily+4H+1H)",
+    "zone": "DEMAND 178.912-179.068 (1H)",
+    "triggered_at": "2026-09-16 00:12:00+00:00",
+    "votes": {},
+    "base_text": "<b>TEST SIGNAL - not a real trade</b>\n\n<b>EUR_JPY - LONG</b>\n\n<b>Entry:</b> 179.000  <i>(off the 15m)</i>\n<b>SL:</b> 178.920  (8 pips)\n<b>TP:</b> 179.160  (16 pips, 2R)\n\nTrend: 3-of-3 agree (Daily+4H+1H)\nZone: DEMAND 178.912-179.068 (1H)\nMethod: confirmation_sequence\nNested: 15m 179.000  -&gt;  5m 178.952  -&gt;  1m 178.932\nTriggered: 2026-09-16 00:12:00+00:00"
+  },
+  "96c0eba3": {
+    "pair": "EUR_JPY",
+    "votes": {
+      "Steven": "valid"
+    },
+    "base_text": "<b>TEST - chart delivery</b>"
+  },
+  "18b81ace": {
+    "pair": "EUR_USD",
+    "direction": "LONG",
+    "entry_price": 1.15348,
+    "entry_level": "15",
+    "sl_pips": 8,
+    "method": "confirmation_sequence",
+    "trend": "2-of-3 agree (4H+1H)",
+    "zone": "DEMAND 1.15319-1.15363 (1H)",
+    "triggered_at": "2026-09-16 02:12:00+00:00",
+    "votes": {
+      "ddavis1721": "valid",
+      "GmanP03": "valid"
+    },
+    "base_text": "<b>EUR_USD - LONG</b>\n\n<b>Entry:</b> 1.15348  <i>(off the 15m)</i>\n<b>SL:</b> 1.15268  (8 pips)\n<b>TP:</b> 1.15508  (16 pips, 2R)\n\nTrend: 2-of-3 agree (4H+1H)\nZone: DEMAND 1.15319-1.15363 (1H)\nMethod: confirmation_sequence\nNested: 15m 1.15348  -&gt;  5m 1.15338  -&gt;  1m 1.15338\nTriggered: 2026-09-16 02:12:00+00:00",
+    "last_tally": "\n\n<b>Votes</b>\nValid (2): ddavis1721, GmanP03"
+  },
+  "21a31935": {
+    "pair": "GBP_USD",
+    "direction": "SHORT",
+    "entry_price": 1.34766,
+    "entry_level": "15",
+    "sl_pips": 8,
+    "method": "confirmation_sequence",
+    "trend": "3-of-3 agree (Daily+4H+1H)",
+    "zone": "SUPPLY 1.34653-1.34859 (4H)",
+    "triggered_at": "2026-09-16 11:28:00+00:00",
+    "votes": {
+      "ddavis1721": "valid",
+      "Steven": "valid"
+    },
+    "base_text": "<b>GBP_USD - SHORT</b>\n\n<b>Entry:</b> 1.34766  <i>(off the 15m)</i>\n<b>SL:</b> 1.34846  (8 pips)\n<b>TP:</b> 1.34606  (16 pips, 2R)\n\nTrend: 3-of-3 agree (Daily+4H+1H)\nZone: SUPPLY 1.34653-1.34859 (4H)\nMethod: confirmation_sequence\nNested: 15m 1.34766  -&gt;  5m 1.34802  -&gt;  1m 1.34820\nTriggered: 2026-09-16 11:28:00+00:00",
+    "last_tally": "\n\n<b>Votes</b>\nValid (2): ddavis1721, Steven"
+  },
+  "a6ad8b34": {
+    "pair": "GBP_CAD",
+    "direction": "SHORT",
+    "entry_price": 1.87657,
+    "entry_level": "5",
+    "sl_pips": 8,
+    "method": "wick_tap",
+    "trend": "2-of-3 agree (4H+1H)",
+    "zone": "SUPPLY 1.87538-1.87664 (1H)",
+    "triggered_at": "2026-09-16 13:45:00+00:00",
+    "votes": {},
+    "base_text": "<b>GBP_CAD - SHORT</b>\n\n<b>Entry:</b> 1.87657  <i>(off the 5m)</i>\n<b>SL:</b> 1.87737  (8 pips)\n<b>TP:</b> 1.87497  (16 pips, 2R)\n\nTrend: 2-of-3 agree (4H+1H)\nZone: SUPPLY 1.87538-1.87664 (1H)\nMethod: wick_tap\nNested: 15m 1.87541  -&gt;  5m 1.87657  -&gt;  1m 1.87552\nTriggered: 2026-09-16 13:45:00+00:00"
+  },
+  "e3ec5854": {
+    "pair": "USD_CAD",
+    "direction": "LONG",
+    "entry_price": 1.39308,
+    "entry_level": "15",
+    "sl_pips": 8,
+    "method": "wick_tap",
+    "trend": "3-of-3 agree (Daily+4H+1H)",
+    "zone": "DEMAND 1.39268-1.39336 (1H)",
+    "triggered_at": "2026-09-16 14:00:00+00:00",
+    "votes": {
+      "Steven": "valid",
+      "ddavis1721": "valid"
+    },
+    "base_text": "<b>USD_CAD - LONG</b>\n\n<b>Entry:</b> 1.39308  <i>(off the 15m)</i>\n<b>SL:</b> 1.39228  (8 pips)\n<b>TP:</b> 1.39468  (16 pips, 2R)\n\nTrend: 3-of-3 agree (Daily+4H+1H)\nZone: DEMAND 1.39268-1.39336 (1H)\nMethod: wick_tap\nNested: 15m 1.39308  -&gt;  5m 1.39300\nTriggered: 2026-09-16 14:00:00+00:00",
+    "last_tally": "\n\n<b>Votes</b>\nValid (2): Steven, ddavis1721"
+  },
+  "4ac9a640": {
+    "pair": "USD_JPY",
+    "direction": "LONG",
+    "entry_price": 154.966,
+    "entry_level": "1",
+    "sl_pips": 8,
+    "method": "wick_tap",
+    "trend": "3-of-3 agree (Daily+4H+1H)",
+    "zone": "DEMAND 154.944-155.155 (1H)",
+    "triggered_at": "2026-09-16 14:15:00+00:00",
+    "votes": {
+      "Steven": "invalid",
+      "ddavis1721": "invalid"
+    },
+    "base_text": "<b>USD_JPY - LONG</b>\n\n<b>Entry:</b> 154.966  <i>(off the 1m)</i>\n<b>SL:</b> 154.886  (8 pips)\n<b>TP:</b> 155.126  (16 pips, 2R)\n\nTrend: 3-of-3 agree (Daily+4H+1H)\nZone: DEMAND 154.944-155.155 (1H)\nMethod: wick_tap\nNested: 1m 154.966\nTriggered: 2026-09-16 14:15:00+00:00",
+    "last_tally": "\n\n<b>Votes</b>\nInvalid (2): Steven, ddavis1721"
+  },
+  "6174bd3e": {
+    "pair": "USD_CAD",
+    "direction": "LONG",
+    "entry_price": 1.39318,
+    "entry_level": "1",
+    "sl_pips": 8,
+    "method": "wick_tap",
+    "trend": "3-of-3 agree (Daily+4H+1H)",
+    "zone": "DEMAND 1.39268-1.39336 (1H)",
+    "triggered_at": "2026-09-16 14:30:00+00:00",
+    "votes": {
+      "GmanP03": "valid",
+      "Steven": "invalid"
+    },
+    "base_text": "<b>USD_CAD - LONG</b>\n\n<b>Entry:</b> 1.39318  <i>(off the 1m)</i>\n<b>SL:</b> 1.39238  (8 pips)\n<b>TP:</b> 1.39478  (16 pips, 2R)\n\nTrend: 3-of-3 agree (Daily+4H+1H)\nZone: DEMAND 1.39268-1.39336 (1H)\nMethod: wick_tap\nNested: 1m 1.39318\nTriggered: 2026-09-16 14:30:00+00:00",
+    "last_tally": "\n\n<b>Votes</b>\nValid (1): GmanP03\nInvalid (1): Steven"
+  },
+  "518d9883": {
+    "pair": "USD_CAD",
+    "direction": "LONG",
+    "entry_price": 1.39332,
+    "entry_level": "5",
+    "sl_pips": 8,
+    "method": "wick_tap",
+    "trend": "3-of-3 agree (Daily+4H+1H)",
+    "zone": "DEMAND 1.39268-1.39336 (1H)",
+    "triggered_at": "2026-09-16 14:30:00+00:00",
+    "votes": {
+      "Steven": "invalid"
+    },
+    "base_text": "<b>USD_CAD - LONG</b>\n\n<b>Entry:</b> 1.39332  <i>(off the 5m)</i>\n<b>SL:</b> 1.39252  (8 pips)\n<b>TP:</b> 1.39492  (16 pips, 2R)\n\nTrend: 3-of-3 agree (Daily+4H+1H)\nZone: DEMAND 1.39268-1.39336 (1H)\nMethod: wick_tap\nNested: 5m 1.39332  -&gt;  1m 1.39318\nTriggered: 2026-09-16 14:30:00+00:00",
+    "last_tally": "\n\n<b>Votes</b>\nInvalid (1): Steven"
+  },
+  "a3c5b398": {
+    "pair": "EUR_USD",
+    "direction": "LONG",
+    "entry_price": 1.15328,
+    "entry_level": "1",
+    "sl_pips": 8,
+    "method": "wick_tap",
+    "trend": "2-of-3 agree (4H+1H)",
+    "zone": "DEMAND 1.15316-1.15388 (1H)",
+    "triggered_at": "2026-09-16 14:45:00+00:00",
+    "votes": {
+      "Steven": "invalid"
+    },
+    "base_text": "<b>EUR_USD - LONG</b>\n\n<b>Entry:</b> 1.15328  <i>(off the 1m)</i>\n<b>SL:</b> 1.15248  (8 pips)\n<b>TP:</b> 1.15488  (16 pips, 2R)\n\nTrend: 2-of-3 agree (4H+1H)\nZone: DEMAND 1.15316-1.15388 (1H)\nMethod: wick_tap\nNested: 1m 1.15328\nTriggered: 2026-09-16 14:45:00+00:00",
+    "last_tally": "\n\n<b>Votes</b>\nInvalid (1): Steven"
+  },
+  "39c532c9": {
+    "pair": "EUR_JPY",
+    "direction": "SHORT",
+    "entry_price": 179.058,
+    "entry_level": "5",
+    "sl_pips": 10,
+    "method": "wick_tap",
+    "trend": "3-of-3 agree (Daily+4H+1H)",
+    "zone": "SUPPLY 179.018-179.158 (1H)",
+    "triggered_at": "2026-09-16 14:45:00+00:00",
+    "votes": {
+      "Steven": "invalid"
+    },
+    "base_text": "<b>EUR_JPY - SHORT</b>\n\n<b>Entry:</b> 179.058  <i>(off the 5m)</i>\n<b>SL:</b> 179.158  (10 pips)\n<b>TP:</b> 178.858  (20 pips, 2R)\n\nTrend: 3-of-3 agree (Daily+4H+1H)\nZone: SUPPLY 179.018-179.158 (1H)\nMethod: wick_tap\nNested: 5m 179.058  -&gt;  1m 179.147\nTriggered: 2026-09-16 14:45:00+00:00",
+    "last_tally": "\n\n<b>Votes</b>\nInvalid (1): Steven"
+  },
+  "6d19eb4b": {
+    "pair": "EUR_USD",
+    "direction": "LONG",
+    "entry_price": 1.15411,
+    "entry_level": "5",
+    "sl_pips": 10,
+    "method": "wick_tap",
+    "trend": "2-of-3 agree (4H+1H)",
+    "zone": "DEMAND 1.15316-1.15388 (1H)",
+    "triggered_at": "2026-09-16 14:45:00+00:00",
+    "votes": {
+      "Steven": "invalid"
+    },
+    "base_text": "<b>EUR_USD - LONG</b>\n\n<b>Entry:</b> 1.15411  <i>(off the 5m)</i>\n<b>SL:</b> 1.15311  (10 pips)\n<b>TP:</b> 1.15611  (20 pips, 2R)\n\nTrend: 2-of-3 agree (4H+1H)\nZone: DEMAND 1.15316-1.15388 (1H)\nMethod: wick_tap\nNested: 5m 1.15411  -&gt;  1m 1.15328\nTriggered: 2026-09-16 14:45:00+00:00",
+    "last_tally": "\n\n<b>Votes</b>\nInvalid (1): Steven"
+  },
+  "eb4298e2": {
+    "pair": "EUR_USD",
+    "direction": "LONG",
+    "entry_price": 1.15404,
+    "entry_level": "15",
+    "sl_pips": 8,
+    "method": "wick_tap",
+    "trend": "2-of-3 agree (4H+1H)",
+    "zone": "DEMAND 1.15316-1.15388 (1H)",
+    "triggered_at": "2026-09-16 15:00:00+00:00",
+    "votes": {
+      "Steven": "invalid"
+    },
+    "base_text": "<b>EUR_USD - LONG</b>\n\n<b>Entry:</b> 1.15404  <i>(off the 15m)</i>\n<b>SL:</b> 1.15324  (8 pips)\n<b>TP:</b> 1.15564  (16 pips, 2R)\n\nTrend: 2-of-3 agree (4H+1H)\nZone: DEMAND 1.15316-1.15388 (1H)\nMethod: wick_tap\nNested: 15m 1.15404  -&gt;  1m 1.15328\nTriggered: 2026-09-16 15:00:00+00:00",
+    "last_tally": "\n\n<b>Votes</b>\nInvalid (1): Steven"
+  },
+  "122d63b5": {
+    "pair": "GBP_CAD",
+    "direction": "SHORT",
+    "entry_price": 1.87452,
+    "entry_level": "15",
+    "sl_pips": 8,
+    "method": "wick_tap",
+    "trend": "2-of-3 agree (4H+1H)",
+    "zone": "SUPPLY 1.87406-1.87582 (1H)",
+    "triggered_at": "2026-09-16 15:45:00+00:00",
+    "votes": {},
+    "base_text": "<b>GBP_CAD - SHORT</b>\n\n<b>Entry:</b> 1.87452  <i>(off the 15m)</i>\n<b>SL:</b> 1.87532  (8 pips)\n<b>TP:</b> 1.87292  (16 pips, 2R)\n\nTrend: 2-of-3 agree (4H+1H)\nZone: SUPPLY 1.87406-1.87582 (1H)\nMethod: wick_tap\nNested: 15m 1.87452  -&gt;  5m 1.87505  -&gt;  1m 1.87523\nTriggered: 2026-09-16 15:45:00+00:00"
+  },
+  "4b33daf3": {
+    "pair": "GBP_USD",
+    "direction": "SHORT",
+    "entry_price": 1.34502,
+    "entry_level": "15",
+    "sl_pips": 8,
+    "method": "wick_tap",
+    "trend": "3-of-3 agree (Daily+4H+1H)",
+    "zone": "SUPPLY 1.34462-1.34632 (1H)",
+    "triggered_at": "2026-09-16 15:45:00+00:00",
+    "votes": {},
+    "base_text": "<b>GBP_USD - SHORT</b>\n\n<b>Entry:</b> 1.34502  <i>(off the 15m)</i>\n<b>SL:</b> 1.34582  (8 pips)\n<b>TP:</b> 1.34342  (16 pips, 2R)\n\nTrend: 3-of-3 agree (Daily+4H+1H)\nZone: SUPPLY 1.34462-1.34632 (1H)\nMethod: wick_tap\nNested: 15m 1.34502  -&gt;  1m 1.34538\nTriggered: 2026-09-16 15:45:00+00:00"
+  },
+  "5a6228c5": {
+    "pair": "GBP_JPY",
+    "direction": "SHORT",
+    "entry_price": 208.888,
+    "entry_level": "15",
+    "sl_pips": 8,
+    "method": "wick_tap",
+    "trend": "2-of-3 agree (4H+1H)",
+    "zone": "SUPPLY 208.602-208.918 (1H)",
+    "triggered_at": "2026-09-16 15:15:00+00:00",
+    "votes": {
+      "GmanP03": "invalid",
+      "ddavis1721": "invalid"
+    },
+    "base_text": "<b>GBP_JPY - SHORT</b>\n\n<b>Entry:</b> 208.888  <i>(off the 15m)</i>\n<b>SL:</b> 208.968  (8 pips)\n<b>TP:</b> 208.728  (16 pips, 2R)\n\nTrend: 2-of-3 agree (4H+1H)\nZone: SUPPLY 208.602-208.918 (1H)\nMethod: wick_tap\nNested: 15m 208.888  -&gt;  5m 208.770  -&gt;  1m 208.828\nTriggered: 2026-09-16 15:15:00+00:00",
+    "last_tally": "\n\n<b>Votes</b>\nInvalid (2): GmanP03, ddavis1721"
+  },
+  "53df4bc5": {
+    "pair": "EUR_JPY",
+    "direction": "SHORT",
+    "entry_price": 179.147,
+    "entry_level": "1",
+    "sl_pips": 8,
+    "method": "wick_tap",
+    "trend": "3-of-3 agree (Daily+4H+1H)",
+    "zone": "SUPPLY 179.018-179.158 (1H)",
+    "triggered_at": "2026-09-16 14:45:00+00:00",
+    "votes": {
+      "GmanP03": "valid"
+    },
+    "base_text": "<b>EUR_JPY - SHORT</b>\n\n<b>Entry:</b> 179.147  <i>(off the 1m)</i>\n<b>SL:</b> 179.227  (8 pips)\n<b>TP:</b> 178.987  (16 pips, 2R)\n\nTrend: 3-of-3 agree (Daily+4H+1H)\nZone: SUPPLY 179.018-179.158 (1H)\nMethod: wick_tap\nNested: 1m 179.147\nTriggered: 2026-09-16 14:45:00+00:00",
+    "last_tally": "\n\n<b>Votes</b>\nValid (1): GmanP03"
+  },
+  "c09f010c": {
+    "pair": "GBP_USD",
+    "direction": "SHORT",
+    "entry_price": 1.34538,
+    "entry_level": "1",
+    "sl_pips": 8,
+    "method": "wick_tap",
+    "trend": "3-of-3 agree (Daily+4H+1H)",
+    "zone": "SUPPLY 1.34462-1.34632 (1H)",
+    "triggered_at": "2026-09-16 16:15:00+00:00",
+    "votes": {
+      "GmanP03": "valid"
+    },
+    "base_text": "<b>GBP_USD - SHORT</b>\n\n<b>Entry:</b> 1.34538  <i>(off the 1m)</i>\n<b>SL:</b> 1.34618  (8 pips)\n<b>TP:</b> 1.34378  (16 pips, 2R)\n\nTrend: 3-of-3 agree (Daily+4H+1H)\nZone: SUPPLY 1.34462-1.34632 (1H)\nMethod: wick_tap\nNested: 1m 1.34538\nTriggered: 2026-09-16 16:15:00+00:00",
+    "last_tally": "\n\n<b>Votes</b>\nValid (1): GmanP03"
+  },
+  "761147ca": {
+    "pair": "EUR_JPY",
+    "direction": "SHORT",
+    "entry_price": 179.057,
+    "entry_level": "5",
+    "sl_pips": 10,
+    "method": "wick_tap",
+    "trend": "3-of-3 agree (Daily+4H+1H)",
+    "zone": "SUPPLY 179.018-179.158 (1H)",
+    "triggered_at": "2026-09-16 16:15:00+00:00",
+    "votes": {
+      "GmanP03": "valid",
+      "ddavis1721": "valid"
+    },
+    "base_text": "<b>EUR_JPY - SHORT</b>\n\n<b>Entry:</b> 179.057  <i>(off the 5m)</i>\n<b>SL:</b> 179.157  (10 pips)\n<b>TP:</b> 178.857  (20 pips, 2R)\n\nTrend: 3-of-3 agree (Daily+4H+1H)\nZone: SUPPLY 179.018-179.158 (1H)\nMethod: wick_tap\nNested: 5m 179.057  -&gt;  1m 179.147\nTriggered: 2026-09-16 16:15:00+00:00",
+    "last_tally": "\n\n<b>Votes</b>\nValid (2): GmanP03, ddavis1721"
+  },
+  "14ac76c3": {
+    "pair": "GBP_CAD",
+    "direction": "SHORT",
+    "entry_price": 1.87505,
+    "entry_level": "5",
+    "sl_pips": 8,
+    "method": "wick_tap",
+    "trend": "2-of-3 agree (4H+1H)",
+    "zone": "SUPPLY 1.87406-1.87582 (1H)",
+    "triggered_at": "2026-09-16 16:30:00+00:00",
+    "votes": {
+      "GmanP03": "valid",
+      "ddavis1721": "valid"
+    },
+    "base_text": "<b>GBP_CAD - SHORT</b>\n\n<b>Entry:</b> 1.87505  <i>(off the 5m)</i>\n<b>SL:</b> 1.87585  (8 pips)\n<b>TP:</b> 1.87345  (16 pips, 2R)\n\nTrend: 2-of-3 agree (4H+1H)\nZone: SUPPLY 1.87406-1.87582 (1H)\nMethod: wick_tap\nNested: 5m 1.87505  -&gt;  1m 1.87523\nTriggered: 2026-09-16 16:30:00+00:00",
+    "last_tally": "\n\n<b>Votes</b>\nValid (2): GmanP03, ddavis1721"
+  },
+  "18231510": {
+    "pair": "EUR_USD",
+    "direction": "SHORT",
+    "entry_price": 1.14671,
+    "entry_level": "1",
+    "sl_pips": 8,
+    "method": "confirmation_sequence",
+    "trend": "2-of-3 agree (Daily+1H)",
+    "zone": "SUPPLY 1.14656-1.14712 (1H)",
+    "triggered_at": "2026-09-17 00:37:00+00:00",
+    "votes": {},
+    "base_text": "<b>EUR_USD - SHORT</b>\n\n<b>Entry:</b> 1.14671  <i>(off the 1m)</i>\n<b>SL:</b> 1.14751  (8 pips)\n<b>TP:</b> 1.14511  (16 pips, 2R)\n\nTrend: 2-of-3 agree (Daily+1H)\nZone: SUPPLY 1.14656-1.14712 (1H)\nMethod: confirmation_sequence\nNested: 15m 1.14678  -&gt;  5m 1.14704  -&gt;  1m 1.14671\nTriggered: 2026-09-17 00:37:00+00:00"
+  },
+  "dceadaf6": {
+    "pair": "GBP_CAD",
+    "direction": "SHORT",
+    "entry_price": 1.87182,
+    "entry_level": "1",
+    "sl_pips": 8,
+    "method": "confirmation_sequence",
+    "trend": "2-of-3 agree (4H+1H)",
+    "zone": "SUPPLY 1.87132-1.8723 (1H)",
+    "triggered_at": "2026-09-17 01:04:00+00:00",
+    "votes": {},
+    "base_text": "<b>GBP_CAD - SHORT</b>\n\n<b>Entry:</b> 1.87182  <i>(off the 1m)</i>\n<b>SL:</b> 1.87262  (8 pips)\n<b>TP:</b> 1.87022  (16 pips, 2R)\n\nTrend: 2-of-3 agree (4H+1H)\nZone: SUPPLY 1.87132-1.87230 (1H)\nMethod: confirmation_sequence\nNested: 5m 1.87229  -&gt;  1m 1.87182\nTriggered: 2026-09-17 01:04:00+00:00"
+  },
+  "721d14ed": {
+    "pair": "USD_CAD",
+    "direction": "LONG",
+    "entry_price": 1.39918,
+    "entry_level": "5",
+    "sl_pips": 8,
+    "method": "confirmation_sequence",
+    "trend": "3-of-3 agree (Daily+4H+1H)",
+    "zone": "DEMAND 1.39868-1.39932 (1H)",
+    "triggered_at": "2026-09-17 00:59:00+00:00",
+    "votes": {},
+    "base_text": "<b>USD_CAD - LONG</b>\n\n<b>Entry:</b> 1.39918  <i>(off the 5m)</i>\n<b>SL:</b> 1.39838  (8 pips)\n<b>TP:</b> 1.40078  (16 pips, 2R)\n\nTrend: 3-of-3 agree (Daily+4H+1H)\nZone: DEMAND 1.39868-1.39932 (1H)\nMethod: confirmation_sequence\nNested: 15m 1.39903  -&gt;  5m 1.39918  -&gt;  1m 1.39870\nTriggered: 2026-09-17 00:59:00+00:00"
+  },
+  "1f5312db": {
+    "pair": "GBP_USD",
+    "direction": "SHORT",
+    "entry_price": 1.3379,
+    "entry_level": "1",
+    "sl_pips": 8,
+    "method": "confirmation_sequence",
+    "trend": "3-of-3 agree (Daily+4H+1H)",
+    "zone": "SUPPLY 1.33787-1.33861 (1H)",
+    "triggered_at": "2026-09-17 00:41:00+00:00",
+    "votes": {},
+    "base_text": "<b>GBP_USD - SHORT</b>\n\n<b>Entry:</b> 1.33790  <i>(off the 1m)</i>\n<b>SL:</b> 1.33870  (8 pips)\n<b>TP:</b> 1.33630  (16 pips, 2R)\n\nTrend: 3-of-3 agree (Daily+4H+1H)\nZone: SUPPLY 1.33787-1.33861 (1H)\nMethod: confirmation_sequence\nNested: 15m 1.33815  -&gt;  5m 1.33843  -&gt;  1m 1.33790\nTriggered: 2026-09-17 00:41:00+00:00"
+  }
+}
