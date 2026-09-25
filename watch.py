@@ -7,6 +7,7 @@ Valid/Invalid vote buttons attached.
   python watch.py --once           # single pass (for cron)
   python watch.py --dry-run        # print instead of sending
   python watch.py --ignore-session # scan outside 9am-1pm ET too
+  python watch.py --ignore-calendar  # scan on Fridays / holidays too (testing)
 """
 import argparse
 import json
@@ -20,7 +21,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from modules.scan_engine import run_scan, is_ny_session_now
+from modules.scan_engine import run_scan, is_ny_session_now, trading_day_block_reason
 from modules import notifier
 
 NY_TZ = pytz.timezone("America/New_York")
@@ -69,12 +70,21 @@ def signal_id(pair: str, result: dict) -> str:
     ])
 
 
-def scan_pass(pairs, state, dry_run=False) -> int:
+def scan_pass(pairs, state, dry_run=False, ignore_calendar=False) -> int:
     sent_count = 0
     now_et = datetime.now(NY_TZ).strftime("%I:%M:%S %p ET")
     print(f"\n[{now_et}] scanning {len(pairs)} pairs...")
 
     for pair in pairs:
+        # Doc 8: no Fridays, no US bank holidays, no pair whose currency
+        # has a holiday. Checked per pair so a CAD holiday only blocks
+        # CAD pairs.
+        if not ignore_calendar:
+            why = trading_day_block_reason(pair)
+            if why:
+                print(f"  {pair}: no trading today -- {why}")
+                continue
+
         try:
             result = run_scan(pair, render_chart_image=False)
         except Exception as e:
@@ -83,7 +93,8 @@ def scan_pass(pairs, state, dry_run=False) -> int:
 
         if not result.get("entry"):
             direction = result.get("valid_direction") or "no direction"
-            print(f"  {pair}: {direction} -- no entry")
+            skip = result.get("skip_reason")
+            print(f"  {pair}: {direction} -- no entry" + (f" ({skip})" if skip else ""))
             continue
 
         sid = signal_id(pair, result)
@@ -142,6 +153,7 @@ def main():
     ap.add_argument("--once", action="store_true")
     ap.add_argument("--interval", type=int, default=300)
     ap.add_argument("--ignore-session", action="store_true")
+    ap.add_argument("--ignore-calendar", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--pairs", type=str, default="")
     args = ap.parse_args()
@@ -156,12 +168,13 @@ def main():
     print(f"Watcher starting. Pairs: {', '.join(pairs)}")
     print(f"Mode: {'single pass' if args.once else f'loop every {args.interval}s'}")
     print(f"Session filter: {'OFF' if args.ignore_session else 'ON (9am-1pm ET only)'}")
+    print(f"Calendar filter: {'OFF' if args.ignore_calendar else 'ON (no Fridays / bank holidays)'}")
 
     while True:
         session = is_ny_session_now()
         if session["active"] or args.ignore_session:
             state = load_state(dry_run=args.dry_run)
-            n = scan_pass(pairs, state, dry_run=args.dry_run)
+            n = scan_pass(pairs, state, dry_run=args.dry_run, ignore_calendar=args.ignore_calendar)
             save_state(state, dry_run=args.dry_run)
             if n:
                 print(f"  -> {n} new alert(s) this pass")
@@ -175,4 +188,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
