@@ -14,3 +14,7 @@ alert_state_dryrun.json
 
 pending_votes.json
 backup_*/
+
+signal_map.json
+vote_offset.json
+votes.csv
