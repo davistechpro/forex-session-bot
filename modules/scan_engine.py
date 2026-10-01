@@ -52,6 +52,9 @@ WICK_TAP_TOLERANCE_PIPS = 20
 ZONE_WINDOW_START = (6, 0)
 ZONE_WINDOW_END = (13, 0)   # exclusive
 
+# Minutes per candle, used to find when a zone's push candle CLOSES.
+TF_MINUTES = {"H4": 240, "H1": 60, "15": 15, "5": 5, "1": 1}
+
 # Currency -> holiday calendar (doc 8).
 CURRENCY_COUNTRY = {"USD": "US", "CAD": "CA", "JPY": "JP", "GBP": "GB", "EUR": "ECB"}
 
@@ -95,6 +98,19 @@ def _is_same_day_narrow_window_zone(zone, reference_time) -> bool:
         return False
     hm = (origin_ny.hour, origin_ny.minute)
     return (6, 0) <= hm < (12, 0)
+
+
+def zone_ready_time(zone):
+    """
+    When the zone actually EXISTS: the close of the candle that pushed
+    away and created it. confirmed_time is that candle's OPEN time, so a
+    1H zone confirmed at 10:00 is not real until 11:00. Nothing that
+    happens before this (taps, 1m closes) may count toward an entry --
+    otherwise the bot uses price action from while the zone was still
+    forming and calls the trade the moment the candle closes.
+    """
+    minutes = TF_MINUTES.get(zone.get("timeframe"), 60)
+    return zone["confirmed_time"] + pd.Timedelta(minutes=minutes)
 
 
 def _within_confirmation_age(zone, reference_time) -> bool:
@@ -188,7 +204,10 @@ def _plan_trade(container: dict, nested: list, zone_type: str, pip: float) -> di
             sl_pips = 8
             break
 
-        target = max(deeper) if zone_type == "supply" else min(deeper)
+        # Doc 4.2: the stop only has to clear the NEXT level in, not the
+        # furthest one. (Checking the furthest level walked the entry all
+        # the way to the deepest 1m zone -- EUR_JPY short, Sept 30.)
+        target = min(deeper) if zone_type == "supply" else max(deeper)
         chosen = None
         for cand in (8, 10):
             sl_try = entry + cand * pip if zone_type == "supply" else entry - cand * pip
@@ -251,12 +270,14 @@ def _check_wick_tap_entry(m5_candles, m15_candles, zone, zone_type,
             cutoff = latest - pd.Timedelta(minutes=max_age_minutes)
 
     tol = WICK_TAP_TOLERANCE_PIPS * pip
+    ready = zone_ready_time(zone)
     for tf_name, tf_candles in [("M15", m15_candles), ("M5", m5_candles)]:
         for _, c in tf_candles.sort_values("time", ascending=False).iterrows():
             t = c["time"]
             if cutoff is not None and t < cutoff:
                 break
-            if not in_ny_window(t) or t <= zone["confirmed_time"]:
+            # Tap candle must OPEN at/after the zone's push candle CLOSED.
+            if not in_ny_window(t) or t < ready:
                 continue
             if zone_type == "demand" and c["low"] <= zone["top"] and c["low"] >= zone["bottom"] - tol:
                 return {"timeframe": tf_name, "time": t, "candle": c, "entry_price": zone["top"]}
@@ -340,7 +361,10 @@ def run_scan(pair: str, render_chart_image: bool = True) -> dict:
                  and _within_confirmation_age(z, reference_time)]
         if older:
             zone = older[-1]
-            conf = find_confirmation_entry(m1, zone, zone_type_needed, max_age_minutes=MAX_ENTRY_AGE_MINUTES)
+            # 1m sequence may only start once the zone's push candle has closed.
+            zone_after_close = {**zone, "confirmed_time": zone_ready_time(zone) - pd.Timedelta(minutes=1)}
+            conf = find_confirmation_entry(m1, zone_after_close, zone_type_needed,
+                                           max_age_minutes=MAX_ENTRY_AGE_MINUTES)
             if conf:
                 plan = _plan_confirmation_trade(zone, m1_zones_all, conf["confirm_time"], zone_type_needed, pip)
                 if plan is None:
@@ -449,3 +473,4 @@ def _render_charts(result, pair, reference_time, zone_used, zone_source_tf, zone
                 result["chart_path_1h"] = out_path_1h
     except Exception as ex:
         print(f"DEBUG: 1H chart render failed with: {ex}")
+
