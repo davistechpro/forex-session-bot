@@ -22,3 +22,5 @@ votes.csv
 signal_map.json
 vote_offset.json
 votes.csv
+
+modules/scan_engine.before_*.py
