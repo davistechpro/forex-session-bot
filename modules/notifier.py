@@ -273,6 +273,8 @@ def format_trade_alert(pair: str, result: dict) -> str:
         lines.append("Confluence: " + ", ".join(LVL_NAMES.get(tf, tf) for tf in conf))
     lines.append(f"Method: {entry['method']}")
     lines.append(f"Triggered: {entry['time']}")
+    if entry.get("filled_at") is not None:
+        lines.append(f"<b>ACTIVE</b> -- entry hit {entry['filled_at']}")
     lines.append("")
     lines.append("<i>Vote, then reply to the prompt with why.</i>")
     return "\n".join(lines)
@@ -283,7 +285,7 @@ def format_setup_alert(pair: str, result: dict) -> str:
     f = _fmt(pair)
     direction = "LONG" if result["valid_direction"] == "bullish" else "SHORT"
     lines = [
-        f"<b>SETUP -- {pair} {direction}</b>",
+        f"<b>{'PENDING' if s.get('kind') == 'pending_entry' else 'SETUP'} -- {pair} {direction}</b>",
         "",
         f"Zone: {zone['type'].upper()} {f.format(zone['bottom'])}-{f.format(zone['top'])} ({result['zone_source_tf']})",
         f"Trend: {result['deciding_tf']}",
@@ -294,7 +296,7 @@ def format_setup_alert(pair: str, result: dict) -> str:
         lvl = LVL_NAMES.get(s.get("planned_level", ""), s.get("planned_level", ""))
         lines += [
             "",
-            "<b>If it triggers:</b>",
+            "<b>If it fills:</b>" if s.get("kind") == "pending_entry" else "<b>If it triggers:</b>",
             f"Entry {f.format(s['planned_entry'])}  <i>({lvl} zone)</i>",
             f"SL {f.format(s['planned_sl'])} ({s['planned_sl_pips']} pips)  /  "
             f"TP {f.format(s['planned_tp'])} ({s['planned_sl_pips'] * 2} pips)",

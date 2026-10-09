@@ -4,7 +4,12 @@ Watcher -- scans all pairs and posts to TWO Telegram chats:
   SETUPS chat  -> trade ideas: a 4H/1H zone qualifies but has not
                   triggered yet. Valid/Invalid buttons, reason required.
                   Posted 9:00 AM - 12:59 PM ET.
-  TRADES chat  -> trades the bot actually takes (wick tap / 1m
+  TRADES chat  -> ACTIVE trades only: the trigger fired AND price has
+                  actually reached the entry price. A trade whose trigger
+                  fired but whose entry hasn't been hit yet posts to the
+                  SETUPS chat as "pending" and moves to TRADES once filled.
+                  (Team, Oct 8: the trades chat is active trades.)
+                  Trigger = wick tap / 1m
                   confirmation done). Chart + Valid/Invalid buttons.
                   A vote only counts once the voter replies with why.
                   Posted 9:00 AM - 12:59 PM ET only.
@@ -28,6 +33,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import pandas as pd
+
+from modules.data_feed import get_candles
 from modules.scan_engine import run_scan, is_ny_session_now, trading_day_block_reason
 from modules.setup_planner import build_setup
 from modules import notifier
@@ -88,6 +96,80 @@ def signal_id(pair: str, result: dict) -> str:
 def setup_id(pair: str, result: dict) -> str:
     direction = "LONG" if result["valid_direction"] == "bullish" else "SHORT"
     return "SETUP|" + _zone_key(pair, direction, result["zone"])
+
+
+def pending_id(pair: str, result: dict) -> str:
+    return "PENDING|" + signal_id(pair, result)
+
+
+def entry_filled(pair: str, entry: dict):
+    """
+    Has price actually reached the entry since the trigger? Checks 1m
+    candles from the trigger candle onward. LONG fills when a low touches
+    the entry; SHORT when a high does. Returns the fill time or None.
+    """
+    m1 = get_candles(pair, "M1", count=500)
+    if len(m1) == 0:
+        return None
+    trig = pd.Timestamp(entry["time"])
+    after = m1[m1["time"] >= trig]
+    px = entry["entry_price"]
+    hit = after[after["low"] <= px] if entry["direction"] == "LONG" else after[after["high"] >= px]
+    return None if hit.empty else hit["time"].iloc[0]
+
+
+def post_pending(pair, result, state, dry_run, send_setups):
+    """Trigger fired but entry not reached yet -> setups chat, once."""
+    sid = pending_id(pair, result)
+    if sid in state["setups_sent"]:
+        print(f"  {pair}: pending entry already posted -- waiting for fill")
+        return 0
+    e = result["entry"]
+    lvl = notifier.LVL_NAMES.get(e.get("entry_level", ""), e.get("entry_level", ""))
+    trig_et = pd.Timestamp(e["time"]).tz_convert(NY_TZ).strftime("%I:%M %p ET")
+    result["setup"] = {
+        "kind": "pending_entry",
+        "waiting_for": f"price to reach the entry ({lvl} zone). Triggered {trig_et} ({e.get('method', '')})",
+        "formed": pd.Timestamp(result["zone"]["origin_time"]).tz_convert(NY_TZ).strftime("%a %b %d %I:%M %p ET"),
+        "planned_entry": e["entry_price"],
+        "planned_level": e.get("entry_level", ""),
+        "planned_sl": e["stop_loss"],
+        "planned_sl_pips": e.get("sl_pips", 8),
+        "planned_tp": e["take_profit"],
+        "note": "PENDING -- posts to the trades chat as ACTIVE once price hits the entry.",
+    }
+    text = notifier.format_setup_alert(pair, result)
+    print(f"  {pair}: PENDING -> {e['direction']} entry {e['entry_price']} not hit yet")
+    if dry_run:
+        print("  --- dry run, not sending ---")
+        print(text)
+        state["setups_sent"].append(sid)
+        return 1
+    if not send_setups:
+        return 0
+    z = result["zone"]
+    notifier.remember_signal(notifier.short_token(sid), {
+        "post_type": "pending",
+        "pair": pair,
+        "direction": e["direction"],
+        "entry_price": e["entry_price"],
+        "entry_level": e.get("entry_level", ""),
+        "sl_pips": e.get("sl_pips", ""),
+        "method": e.get("method", ""),
+        "trend": result.get("deciding_tf", ""),
+        "zone": f"{z['type'].upper()} {z['bottom']}-{z['top']} ({result['zone_source_tf']})",
+        "triggered_at": str(e.get("time", "")),
+    })
+    chart = _chart_for(pair)
+    ok = (notifier.send_photo(chart, text, signal_id=sid, chat="setups") if chart
+          else notifier.send_message(text, signal_id=sid, chat="setups"))
+    if ok:
+        state["setups_sent"].append(sid)
+        save_state(state)
+        print("  pending posted" + (" with chart" if chart else " (text only)"))
+        return 1
+    print("  pending FAILED to send -- will retry next pass")
+    return 0
 
 
 def window_now() -> dict:
@@ -184,6 +266,7 @@ def post_trade(pair, result, state, dry_run):
         "trend": result.get("deciding_tf", ""),
         "zone": f"{z['type'].upper()} {z['bottom']}-{z['top']} ({result['zone_source_tf']})",
         "triggered_at": str(e.get("time", "")),
+        "filled_at": str(e.get("filled_at", "")),
     })
 
     ok = (notifier.send_photo(chart, text, signal_id=sid, chat="trades") if chart
@@ -216,10 +299,22 @@ def scan_pass(pairs, state, win, dry_run=False, ignore_calendar=False, send_setu
             continue
 
         if result.get("entry"):
-            if win["trades"]:
+            if not win["trades"]:
+                print(f"  {pair}: entry found but outside 9:00 AM - 12:59 PM ET -- held")
+                continue
+            if signal_id(pair, result) in state["sent"]:
+                print(f"  {pair}: trade already alerted -- skipping")
+                continue
+            try:
+                filled = entry_filled(pair, result["entry"])
+            except Exception as ex:
+                print(f"  {pair}: fill check failed ({ex}) -- treating as pending")
+                filled = None
+            if filled is not None:
+                result["entry"]["filled_at"] = filled
                 count += post_trade(pair, result, state, dry_run)
             else:
-                print(f"  {pair}: entry found but before 9:00 AM ET -- held")
+                count += post_pending(pair, result, state, dry_run, send_setups)
             continue
 
         if result.get("zone") and win["setups"]:
