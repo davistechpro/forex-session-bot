@@ -109,8 +109,11 @@ def zone_ready_time(zone):
     otherwise the bot uses price action from while the zone was still
     forming and calls the trade the moment the candle closes.
     """
+    # Gage, Oct 8: after the confirming candle closes, the NEXT candle of the
+    # zone's own timeframe (1H for a 1H zone, 4H for a 4H zone) must close
+    # before price can come back into the zone and trigger.
     minutes = TF_MINUTES.get(zone.get("timeframe"), 60)
-    return zone["confirmed_time"] + pd.Timedelta(minutes=minutes)
+    return zone["confirmed_time"] + pd.Timedelta(minutes=2 * minutes)
 
 
 def _within_confirmation_age(zone, reference_time) -> bool:
