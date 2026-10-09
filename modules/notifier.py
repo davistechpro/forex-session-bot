@@ -2,7 +2,7 @@
 Telegram Notifier -- two chats, vote buttons on trades.
 
   SETUPS chat (TELEGRAM_SETUPS_CHAT_ID): every trade idea -- a zone that
-    qualifies but has not triggered yet. No voting.
+    qualifies but has not triggered yet. Valid/Invalid buttons, reason required.
   TRADES chat (TELEGRAM_TRADES_CHAT_ID, falls back to TELEGRAM_CHAT_ID):
     every trade the bot actually takes. Valid/Invalid buttons; a vote only
     counts once the voter replies with WHY.
@@ -303,7 +303,8 @@ def format_setup_alert(pair: str, result: dict) -> str:
         lines += ["", "<i>Entry is set at the 1m zone once the confirmation completes.</i>"]
     if s.get("note"):
         lines += ["", f"<i>{html.escape(str(s['note']))}</i>"]
-    lines += ["", "<i>Trade idea only -- not taken. If it triggers it posts in the trades chat.</i>"]
+    lines += ["", "<i>Trade idea only -- not taken. If it triggers it posts in the trades chat.</i>",
+              "<i>Vote, then reply to the prompt with why.</i>"]
     return "\n".join(lines)
 
 

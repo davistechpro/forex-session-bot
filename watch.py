@@ -2,7 +2,8 @@
 Watcher -- scans all pairs and posts to TWO Telegram chats:
 
   SETUPS chat  -> trade ideas: a 4H/1H zone qualifies but has not
-                  triggered yet. No buttons. Posted 9:00 AM - 12:59 PM ET.
+                  triggered yet. Valid/Invalid buttons, reason required.
+                  Posted 9:00 AM - 12:59 PM ET.
   TRADES chat  -> trades the bot actually takes (wick tap / 1m
                   confirmation done). Chart + Valid/Invalid buttons.
                   A vote only counts once the voter replies with why.
@@ -132,8 +133,21 @@ def post_setup(pair, result, state, dry_run, send_setups):
         return 0
 
     chart = _chart_for(pair)
-    ok = (notifier.send_photo(chart, text, chat="setups") if chart
-          else notifier.send_message(text, chat="setups"))
+    s, z = result["setup"], result["zone"]
+    notifier.remember_signal(notifier.short_token(sid), {
+        "post_type": "setup",
+        "pair": pair,
+        "direction": "LONG" if result["valid_direction"] == "bullish" else "SHORT",
+        "entry_price": s.get("planned_entry") if s.get("planned_entry") is not None else "",
+        "entry_level": s.get("planned_level", ""),
+        "sl_pips": s.get("planned_sl_pips", ""),
+        "method": f"setup ({s.get('kind', '')})",
+        "trend": result.get("deciding_tf", ""),
+        "zone": f"{z['type'].upper()} {z['bottom']}-{z['top']} ({result['zone_source_tf']})",
+        "triggered_at": "",
+    })
+    ok = (notifier.send_photo(chart, text, signal_id=sid, chat="setups") if chart
+          else notifier.send_message(text, signal_id=sid, chat="setups"))
     if ok:
         state["setups_sent"].append(sid)
         save_state(state)
@@ -160,6 +174,7 @@ def post_trade(pair, result, state, dry_run):
     chart = _chart_for(pair)
     e, z = result["entry"], result["zone"]
     notifier.remember_signal(notifier.short_token(sid), {
+        "post_type": "trade",
         "pair": pair,
         "direction": e["direction"],
         "entry_price": e["entry_price"],

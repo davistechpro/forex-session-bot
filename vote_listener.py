@@ -1,5 +1,5 @@
 """
-Vote Listener -- Valid/Invalid on TRADES, with a required reason.
+Vote Listener -- Valid/Invalid on SETUPS and TRADES, with a required reason.
 
   1. Someone taps Valid or Invalid on a trade alert.
   2. The bot replies to the alert tagging them: "why?" (their keyboard
@@ -32,7 +32,7 @@ OFFSET_FILE = Path("vote_offset.json")
 FIELDS = [
     "voted_at_et", "voter", "verdict", "reason", "pair", "direction",
     "entry_price", "entry_level", "sl_pips", "method",
-    "trend", "zone", "triggered_at", "signal_token",
+    "trend", "zone", "triggered_at", "signal_token", "post_type",
 ]
 SIGNAL_FIELDS = ["pair", "direction", "entry_price", "entry_level",
                  "sl_pips", "method", "trend", "zone", "triggered_at"]
@@ -57,22 +57,25 @@ def _save_offset(offset: int):
 
 
 def _migrate_votes_csv():
-    """Older votes.csv has no 'reason' column -- add it (blank) once."""
+    """Add any missing columns to an older votes.csv (old rows were all trades)."""
     if not VOTES_FILE.exists():
         return
     with VOTES_FILE.open(newline="", encoding="utf-8") as fh:
-        rows = list(csv.DictReader(fh))
-        header = rows[0].keys() if rows else []
-    if rows and "reason" in header:
-        return
-    if not rows:
+        reader = csv.DictReader(fh)
+        header = reader.fieldnames or []
+        rows = list(reader)
+    missing = [f for f in FIELDS if f not in header]
+    if not missing:
         return
     with VOTES_FILE.open("w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=FIELDS)
         w.writeheader()
         for r in rows:
-            w.writerow({k: r.get(k, "") for k in FIELDS})
-    print(f"votes.csv upgraded with a 'reason' column ({len(rows)} old rows kept, reason blank)")
+            row = {k: r.get(k, "") for k in FIELDS}
+            if not row["post_type"]:
+                row["post_type"] = "trade"
+            w.writerow(row)
+    print(f"votes.csv upgraded: added {', '.join(missing)} ({len(rows)} old rows kept)")
 
 
 def _append_vote(row: dict):
@@ -134,7 +137,8 @@ def handle_callback(cb: dict):
     mention = f'<a href="tg://user?id={uid}">{html.escape(user.get("first_name") or voter)}</a>'
     prompt = notifier.send_reason_prompt(
         chat_id, msg.get("message_id"),
-        f"{mention} -- you picked <b>{verdict.upper()}</b> on "
+        f"{mention} -- you picked <b>{verdict.upper()}</b> on the "
+        f"{html.escape(str(sig.get('post_type') or 'trade'))} "
         f"{html.escape(str(sig.get('pair', '')))} {html.escape(str(sig.get('direction', '')))}.\n"
         f"Reply to this message with <b>why</b>. Your vote counts once you reply.",
     )
@@ -194,6 +198,7 @@ def handle_message(msg: dict):
     _append_vote({
         "voted_at_et": now_et, "voter": p["name"], "verdict": p["verdict"],
         "reason": reason, "signal_token": token,
+        "post_type": sig.get("post_type") or "trade",
         **{k: sig.get(k, "") for k in SIGNAL_FIELDS},
     })
     print(f"[{now_et}] {p['name']} -> {p['verdict'].upper()} on {sig.get('pair', 'signal')}: {reason}")
