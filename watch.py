@@ -2,7 +2,7 @@
 Watcher -- scans all pairs and posts to TWO Telegram chats:
 
   SETUPS chat  -> trade ideas: a 4H/1H zone qualifies but has not
-                  triggered yet. No buttons. Posted from 6:00 AM ET.
+                  triggered yet. No buttons. Posted 9:00 AM - 12:59 PM ET.
   TRADES chat  -> trades the bot actually takes (wick tap / 1m
                   confirmation done). Chart + Valid/Invalid buttons.
                   A vote only counts once the voter replies with why.
@@ -37,7 +37,7 @@ DRY_STATE_FILE = Path("alert_state_dryrun.json")
 
 PAIRS = ["EUR_USD", "EUR_JPY", "GBP_CAD", "USD_JPY", "USD_CAD", "GBP_USD", "GBP_JPY"]
 
-SETUPS_START = (6, 0)     # doc 1: pre-NY starts 6:00 AM ET
+SETUPS_START = (9, 0)     # team, Oct 8: nothing posts before 9:00 AM ET
 SESSION_END = (12, 59)    # doc 1: NY session ends 12:59 PM ET
 
 
@@ -242,7 +242,7 @@ def main():
 
     print(f"Watcher starting. Pairs: {', '.join(pairs)}")
     print(f"Mode: {'single pass' if args.once else f'loop every {args.interval}s'}")
-    print(f"Session filter: {'OFF' if args.ignore_session else 'ON (setups 6am-12:59pm, trades 9am-12:59pm ET)'}")
+    print(f"Session filter: {'OFF' if args.ignore_session else 'ON (setups and trades 9am-12:59pm ET)'}")
     print(f"Calendar filter: {'OFF' if args.ignore_calendar else 'ON (no Fridays / bank holidays)'}")
 
     while True:
@@ -257,7 +257,7 @@ def main():
             if n:
                 print(f"  -> {n} new post(s) this pass")
         else:
-            print(f"[{win['label']}] outside 6am-1pm ET -- idle")
+            print(f"[{win['label']}] outside 9am-1pm ET -- idle")
 
         if args.once:
             break
