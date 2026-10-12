@@ -129,8 +129,9 @@ def trading_day_block_reason(pair: str, when=None) -> str | None:
     holiday. Returns a reason string if blocked, else None.
     """
     now_ny = (when or datetime.now(pytz.UTC)).astimezone(NY_TZ)
-    if now_ny.weekday() == 4:
-        return "Friday"
+    # Doc 8: no Fridays. Weekends: market closed, candles are stale Friday data.
+    if now_ny.weekday() in (4, 5, 6):
+        return ("Friday", "Saturday", "Sunday")[now_ny.weekday() - 4]
 
     try:
         import holidays as _hol
