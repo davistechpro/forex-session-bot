@@ -217,7 +217,7 @@ def main():
     offset = _load_offset()
     while True:
         try:
-            updates = notifier.get_updates(offset=offset, timeout=25)
+            updates = notifier.get_updates(offset=offset, timeout=10)  # short polls: desktop network drops idle connections
             for u in updates:
                 offset = u["update_id"] + 1
                 try:
