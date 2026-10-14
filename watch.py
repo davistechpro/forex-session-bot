@@ -39,6 +39,7 @@ from modules.data_feed import get_candles
 from modules.scan_engine import run_scan, is_ny_session_now, trading_day_block_reason
 from modules.setup_planner import build_setup
 from modules import notifier
+from modules import heartbeat
 
 NY_TZ = pytz.timezone("America/New_York")
 STATE_FILE = Path("alert_state.json")
@@ -369,6 +370,7 @@ def main():
         else:
             print(f"[{win['label']}] outside 9am-1pm ET -- idle")
 
+        heartbeat.ping("HEALTHCHECK_WATCH_URL", min_interval=0)
         if args.once:
             break
         time.sleep(args.interval)
