@@ -17,6 +17,7 @@ agreement can be measured later.
   ANTHROPIC_FOUNDRY_RESOURCE=...        Foundry resource name (or use
   ANTHROPIC_FOUNDRY_BASE_URL=...        the full .../anthropic/ URL instead)
   AGENT_REVIEW_MODEL=claude-opus-5-5    deployment name, if you changed it
+  AGENT_SIGNATURE=...                   sign-off line under every review (optional)
 """
 import base64
 import csv
@@ -129,7 +130,9 @@ def _run(sent_result, post_text, chart_path, post_type, chat, pair, signal_id, p
         print(f"AGENT: review failed for {pair} ({e})")
         return
     verdict = _verdict(text)
-    reply = text if len(text) <= 3900 else text[:3890] + "\n..."
+    sign = os.getenv("AGENT_SIGNATURE", "-- OPT Agent (AI trade review)")
+    reply = text if len(text) <= 3800 else text[:3790] + "\n..."
+    reply += "\n\n" + sign
     notifier._call("sendMessage", {
         "chat_id": sent_result["chat"]["id"],
         "text": reply,
