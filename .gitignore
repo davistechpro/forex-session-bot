@@ -24,3 +24,5 @@ vote_offset.json
 votes.csv
 
 modules/scan_engine.before_*.py
+agent_reviews.csv
+.env.backup_*

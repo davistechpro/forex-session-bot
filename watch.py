@@ -40,6 +40,10 @@ from modules.scan_engine import run_scan, is_ny_session_now, trading_day_block_r
 from modules.setup_planner import build_setup
 from modules import notifier
 from modules import heartbeat
+from modules import agent_reviewer
+from modules import agent_reviewer
+from modules import agent_reviewer
+from modules import agent_reviewer
 
 NY_TZ = pytz.timezone("America/New_York")
 STATE_FILE = Path("alert_state.json")
@@ -167,6 +171,10 @@ def post_pending(pair, result, state, dry_run, send_setups):
     if ok:
         state["setups_sent"].append(sid)
         save_state(state)
+        agent_reviewer.review_async(ok, text, chart, "pending", "setups", pair, sid)
+        agent_reviewer.review_async(ok, text, chart, "pending", "setups", pair, sid)
+        agent_reviewer.review_async(ok, text, chart, "pending", "setups", pair, sid)
+        agent_reviewer.review_async(ok, text, chart, "pending", "setups", pair, sid)
         print("  pending posted" + (" with chart" if chart else " (text only)"))
         return 1
     print("  pending FAILED to send -- will retry next pass")
@@ -234,6 +242,10 @@ def post_setup(pair, result, state, dry_run, send_setups):
     if ok:
         state["setups_sent"].append(sid)
         save_state(state)
+        agent_reviewer.review_async(ok, text, chart, "setup", "setups", pair, sid)
+        agent_reviewer.review_async(ok, text, chart, "setup", "setups", pair, sid)
+        agent_reviewer.review_async(ok, text, chart, "setup", "setups", pair, sid)
+        agent_reviewer.review_async(ok, text, chart, "setup", "setups", pair, sid)
         print("  setup posted" + (" with chart" if chart else " (text only)"))
         return 1
     print("  setup FAILED to send -- will retry next pass")
@@ -275,6 +287,10 @@ def post_trade(pair, result, state, dry_run):
     if ok:
         state["sent"].append(sid)
         save_state(state)
+        agent_reviewer.review_async(ok, text, chart, "active", "trades", pair, sid)
+        agent_reviewer.review_async(ok, text, chart, "active", "trades", pair, sid)
+        agent_reviewer.review_async(ok, text, chart, "active", "trades", pair, sid)
+        agent_reviewer.review_async(ok, text, chart, "active", "trades", pair, sid)
         print("  trade alert sent" + (" with chart" if chart else " (text only)"))
         return 1
     print("  trade alert FAILED to send -- will retry next pass")
