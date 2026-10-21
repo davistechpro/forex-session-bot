@@ -265,7 +265,7 @@ def format_trade_alert(pair: str, result: dict) -> str:
         f"<b>SL:</b> {f.format(entry['stop_loss'])}  ({entry.get('sl_pips', 8)} pips)",
         f"<b>TP:</b> {f.format(entry['take_profit'])}  ({entry.get('tp_pips', 16)} pips, 2R)",
         "",
-        f"Trend: {result['deciding_tf']}",
+        f"Trend: <b>{str(result.get('valid_direction') or '').upper()}</b> -- {result['deciding_tf']}",
         f"Zone: {zone['type'].upper()} {f.format(zone['bottom'])}-{f.format(zone['top'])} ({result['zone_source_tf']})",
     ]
     conf = entry.get("confluence") or []
@@ -288,7 +288,7 @@ def format_setup_alert(pair: str, result: dict) -> str:
         f"<b>{'PENDING' if s.get('kind') == 'pending_entry' else 'SETUP'} -- {pair} {direction}</b>",
         "",
         f"Zone: {zone['type'].upper()} {f.format(zone['bottom'])}-{f.format(zone['top'])} ({result['zone_source_tf']})",
-        f"Trend: {result['deciding_tf']}",
+        f"Trend: <b>{str(result.get('valid_direction') or '').upper()}</b> -- {result['deciding_tf']}",
         f"Zone formed: {s.get('formed', '')}",
         f"<b>Waiting for:</b> {s['waiting_for']}",
     ]

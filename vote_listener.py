@@ -141,11 +141,12 @@ def handle_callback(cb: dict):
         f"{mention} -- you picked <b>{verdict.upper()}</b> on the "
         f"{html.escape(str(sig.get('post_type') or 'trade'))} "
         f"{html.escape(str(sig.get('pair', '')))} {html.escape(str(sig.get('direction', '')))}.\n"
-        f"Reply to this message with <b>why</b>. Your vote counts once you reply.",
+        f"Now type <b>why</b> in the chat. Your next message counts as your reason.",
     )
     if prompt:
         notifier.add_pending(notifier.pending_key(chat_id, prompt["message_id"]),
-                             {"token": token, "user_id": uid, "name": voter, "verdict": verdict})
+                             {"token": token, "user_id": uid, "name": voter, "verdict": verdict,
+                              "tapped_at": time.time()})
 
     notifier.answer_callback(cb["id"], f"{verdict.upper()} -- now reply with why")
     print(f"[{datetime.now(NY_TZ):%H:%M:%S}] {voter} tapped {verdict.upper()} on "
@@ -159,7 +160,7 @@ def _find_pending_for_reply(msg: dict):
     chat_id = (msg.get("chat") or {}).get("id")
     uid = (msg.get("from") or {}).get("id")
     if not reply_to:
-        return None, None
+        return _latest_open_prompt(chat_id, uid)
 
     key = notifier.pending_key(chat_id, reply_to.get("message_id"))
     p = notifier.get_pending(key)
@@ -173,7 +174,25 @@ def _find_pending_for_reply(msg: dict):
         pend = (sig.get("pending") or {}).get(str(uid))
         if pend:
             return None, {"token": token, "user_id": uid, "name": pend["name"], "verdict": pend["verdict"]}
-    return None, None
+    # Replied to something else (e.g. Chad's review): still the voter's reason.
+    return _latest_open_prompt(chat_id, uid)
+
+
+REASON_WINDOW_MIN = 30   # a message counts as the reason if sent within 30 min of the tap
+
+
+def _latest_open_prompt(chat_id, uid):
+    """The voter's newest open vote in this chat, if they tapped within the window.
+    Works because the bot's group privacy is OFF, so it sees normal messages."""
+    best = None
+    for key, p in notifier._load(notifier.PENDING_FILE).items():
+        if p.get("user_id") != uid or not key.startswith(f"{chat_id}:"):
+            continue
+        if time.time() - p.get("tapped_at", 0) > REASON_WINDOW_MIN * 60:
+            continue
+        if best is None or p.get("tapped_at", 0) > best[1].get("tapped_at", 0):
+            best = (key, p)
+    return best if best else (None, None)
 
 
 def _clear_prompts(token: str, uid):
@@ -185,7 +204,7 @@ def _clear_prompts(token: str, uid):
 
 def handle_message(msg: dict):
     reason = (msg.get("text") or "").strip()
-    if not reason:
+    if not reason or reason.startswith("/"):
         return
     key, p = _find_pending_for_reply(msg)
     if not p:

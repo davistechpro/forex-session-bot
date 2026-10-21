@@ -64,12 +64,14 @@ def main():
     ptype = "active" if post_type == "trade" else post_type
     chart = newest_chart(pair)
     posted = chart_time(chart)
+    if not sig.get("agent_facts"):
+        print("NOTE: this post is from before Chad got BOT FACTS -- he will grade it from the picture only.")
     print(f"Post: {pair} {sig.get('direction', '')} ({ptype}) | chart: {chart or 'none'}"
           f" | posted: {posted.strftime('%a %b %d %I:%M %p ET') if posted else 'unknown'}")
 
     if not args.send:
         print("\n--- agent review ---\n")
-        print(agent_reviewer.review(sig["base_text"], chart, ptype, chat, posted))
+        print(agent_reviewer.review(sig["base_text"], chart, ptype, chat, posted, sig.get("agent_facts")))
         return
 
     text = "[TEST -- agent review demo]\n" + sig["base_text"]
@@ -78,7 +80,7 @@ def main():
     if not sent:
         raise SystemExit("STOP -- couldn't post the test message to the setups chat")
     print("Test post sent -- reviewing (this can take 20-60 seconds)...")
-    agent_reviewer._run(sent, sig["base_text"], chart, ptype, chat, pair, None, posted)
+    agent_reviewer._run(sent, sig["base_text"], chart, ptype, chat, pair, None, posted, sig.get("agent_facts"))
     print("Done -- check the setups chat.")
 
 
