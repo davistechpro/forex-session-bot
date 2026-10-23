@@ -1,0 +1,274 @@
+"""
+Chad -- operations. Run it in its own window next to watch.py and
+vote_listener.py:
+
+    py chad.py
+
+On trading days (Mon-Thu, no bank holidays) Chad posts to the SETUPS chat:
+  8:45 AM   Morning check: are the watcher and the vote listener running,
+            plus today's red-news events for our 7 pairs.
+  9:00-1:00 Watches the bot. Alerts if the watcher stops scanning, the vote
+            listener stops polling, or anything throws an error.
+            15 minutes before each red-news event: a heads-up.
+  1:05 PM   End-of-day summary: what posted, what each pair did and why,
+            Chad's verdicts, errors, and the scorecard (votes toward 300,
+            bot accuracy, Chad's agreement with the team).
+
+Questions in the chat ("Chad, why didn't GJ post?") are answered by the
+vote listener, since it's the process that reads the chat.
+
+  py chad.py --now morning     run one job right now (morning / summary / check)
+  py chad.py --dry-run         print instead of posting
+"""
+import argparse
+import html
+import json
+import time
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import pytz
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from modules import heartbeat, news, notifier, scorecard, status  # noqa: E402
+from modules.scan_engine import trading_day_block_reason  # noqa: E402
+
+NY = pytz.timezone("America/New_York")
+PAIRS = news.PAIRS
+STATE = status.DIR / "chad_state.json"
+SIGN = "\n\n-- Chad"
+WATCH_STALE_MIN = 12      # watcher scans every 5 min
+LISTENER_STALE_MIN = 5    # listener polls every ~10 s
+REALERT_MIN = 30
+
+DRY = False
+
+
+# ------------------------------------------------------------------ helpers
+
+def now():
+    return datetime.now(NY)
+
+
+def is_trading_day(t=None) -> bool:
+    t = t or now()
+    return any(trading_day_block_reason(p, when=t) is None for p in PAIRS)
+
+
+def load_state() -> dict:
+    day = now().strftime("%Y-%m-%d")
+    try:
+        s = json.loads(STATE.read_text(encoding="utf-8"))
+    except Exception:
+        s = {}
+    if s.get("day") != day:
+        s = {"day": day, "done": [], "alerts": {}, "errors_seen": 0, "news_warned": []}
+    return s
+
+
+def save_state(s: dict):
+    status.DIR.mkdir(exist_ok=True)
+    STATE.write_text(json.dumps(s, indent=1), encoding="utf-8")
+
+
+def post(text: str):
+    body = html.escape(text) + SIGN
+    if DRY:
+        print("---- would post ----\n" + body + "\n--------------------")
+        return
+    if not notifier.send_message(body, chat="setups"):
+        print("CHAD: couldn't post to the setups chat")
+
+
+def age_min(name: str):
+    ts, data = status.last_beat(name)
+    if ts is None:
+        return None, data
+    return (now() - ts).total_seconds() / 60, data
+
+
+def health_lines():
+    """[(ok, text)] for the watcher and the listener."""
+    out = []
+    a, d = age_min("watch")
+    if a is None:
+        out.append((False, "Watcher: no sign of it yet (watch.py not started on the new code?)"))
+    elif a > WATCH_STALE_MIN:
+        out.append((False, f"Watcher: last scan {a:.0f} min ago ({d.get('label', '')}). It looks stopped."))
+    else:
+        out.append((True, f"Watcher: running (last scan {d.get('label', '')})"))
+    a, d = age_min("listener")
+    if a is None:
+        out.append((False, "Vote listener: no sign of it yet (vote_listener.py not started on the new code?)"))
+    elif a > LISTENER_STALE_MIN:
+        out.append((False, f"Vote listener: last poll {a:.0f} min ago. It looks stopped, so votes won't count."))
+    else:
+        out.append((True, "Vote listener: running"))
+    return out
+
+
+# ------------------------------------------------------------------ jobs
+
+def job_morning(s):
+    lines = [f"Morning check, {now():%A %b %d}."]
+    for ok, txt in health_lines():
+        lines.append(("OK  " if ok else "PROBLEM  ") + txt)
+    evs, err = news.red_events()
+    if err:
+        lines.append(f"\nRed news: {err}. Check the calendar manually.")
+    elif evs:
+        lines.append("\nRed news today for our pairs:")
+        lines += [news.line(e) for e in evs]
+    else:
+        lines.append("\nNo red news today for our pairs.")
+    blocked = [(p, trading_day_block_reason(p)) for p in PAIRS]
+    blocked = [f"{p.replace('_', '/')} ({why})" for p, why in blocked if why]
+    if blocked:
+        lines.append("\nNot trading today: " + ", ".join(blocked))
+    post("\n".join(lines))
+    s["news"] = [{"t": e["time"].isoformat(), "line": news.line(e)} for e in evs]
+
+
+def _alert_once(s, key, text):
+    last = s["alerts"].get(key)
+    if last and (now() - datetime.fromisoformat(last)) < timedelta(minutes=REALERT_MIN):
+        return
+    s["alerts"][key] = now().isoformat(timespec="seconds")
+    post(text)
+
+
+def job_check(s):
+    for ok, txt in health_lines():
+        key = txt.split(":")[0]
+        if not ok:
+            _alert_once(s, key, "Heads up: " + txt)
+        elif key in s["alerts"]:
+            s["alerts"].pop(key)
+            post(f"Back to normal: {txt}")
+    errs = status.errors_today()
+    new = errs[s.get("errors_seen", 0):]
+    if new:
+        s["errors_seen"] = len(errs)
+        shown = new[-5:]
+        lines = [f"{len(new)} new error(s) from the bot:"]
+        lines += [f"{e['ts'][11:16]} {e['source']}: {e['msg'][:200]}" for e in shown]
+        post("\n".join(lines))
+    # red-news heads-up 15 min before
+    for ev in s.get("news", []):
+        t = datetime.fromisoformat(ev["t"])
+        mins = (t - now()).total_seconds() / 60
+        if 0 < mins <= 15 and ev["t"] not in s["news_warned"]:
+            s["news_warned"].append(ev["t"])
+            post(f"Red news in {mins:.0f} min: {ev['line']}")
+
+
+def _posts_today():
+    try:
+        st = json.loads(Path("alert_state.json").read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    if st.get("day") != now().strftime("%Y-%m-%d"):
+        return []
+    out = []
+    for sid in st.get("setups_sent", []) + st.get("sent", []):
+        parts = sid.split("|")
+        if parts[0] in ("SETUP", "PENDING"):
+            kind, pair, direction = parts[0], parts[1], parts[2]
+        else:
+            kind, pair, direction = "TRADE (active)", parts[0], parts[1]
+        out.append(f"{kind} {pair.replace('_', '/')} {direction}")
+    return out
+
+
+def _chad_verdicts_today():
+    import csv
+    path = Path("agent_reviews.csv")
+    if not path.exists():
+        return {}
+    day = now().strftime("%Y-%m-%d")
+    counts = {}
+    with path.open(newline="", encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            if (r.get("reviewed_at") or "").startswith(day):
+                counts[r.get("verdict", "?")] = counts.get(r.get("verdict", "?"), 0) + 1
+    return counts
+
+
+def job_summary(s):
+    day = now().strftime("%Y-%m-%d")
+    lines = [f"End of session, {now():%A %b %d}."]
+    posts = _posts_today()
+    lines.append(f"\nPosted today ({len(posts)}):" if posts else "\nNothing posted today.")
+    lines += [f"  {p}" for p in posts]
+    pairs = status.pairs_today()
+    if pairs:
+        lines.append("\nWhere each pair ended up:")
+        for p in PAIRS:
+            if p in pairs:
+                lines.append(f"  {p.replace('_', '/')}: {pairs[p]['outcome']}")
+    v = _chad_verdicts_today()
+    if v:
+        lines.append("\nMy reviews today: " + ", ".join(f"{k} {n}" for k, n in sorted(v.items())))
+    errs = status.errors_today()
+    if errs:
+        lines.append(f"\nErrors today: {len(errs)} (last: {errs[-1]['source']}: {errs[-1]['msg'][:120]})")
+    lines.append("\n" + scorecard.text(day))
+    post("\n".join(lines))
+
+
+JOBS = {"morning": job_morning, "check": job_check, "summary": job_summary}
+
+
+# ------------------------------------------------------------------ loop
+
+def main():
+    global DRY
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--now", choices=list(JOBS))
+    ap.add_argument("--dry-run", action="store_true")
+    args = ap.parse_args()
+    DRY = args.dry_run
+
+    if args.now:
+        s = load_state()
+        if args.now == "check" and "news" not in s:
+            s["news"] = []
+        JOBS[args.now](s)
+        save_state(s)
+        return
+
+    print("Chad (operations) running. Ctrl+C to stop.")
+    while True:
+        try:
+            status.beat("chad")
+            heartbeat.ping("HEALTHCHECK_CHAD_URL", min_interval=60)
+            t = now()
+            hm = (t.hour, t.minute)
+            if is_trading_day(t):
+                s = load_state()
+                if hm >= (8, 45) and "morning" not in s["done"] and hm < (13, 0):
+                    s["done"].append("morning")
+                    job_morning(s)
+                if (8, 50) <= hm <= (13, 2):
+                    job_check(s)
+                if hm >= (13, 5) and "summary" not in s["done"] and hm < (17, 0):
+                    s["done"].append("summary")
+                    job_summary(s)
+                save_state(s)
+        except KeyboardInterrupt:
+            print("\nStopped.")
+            break
+        except Exception as e:
+            print(f"chad error: {e}")
+            status.error("chad", e)
+        try:
+            time.sleep(60)
+        except KeyboardInterrupt:
+            print("\nStopped.")
+            break
+
+
+if __name__ == "__main__":
+    main()

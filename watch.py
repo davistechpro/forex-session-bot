@@ -41,6 +41,7 @@ from modules.setup_planner import build_setup
 from modules import notifier
 from modules import heartbeat
 from modules import agent_reviewer
+from modules import status
 
 NY_TZ = pytz.timezone("America/New_York")
 STATE_FILE = Path("alert_state.json")
@@ -172,6 +173,7 @@ def post_pending(pair, result, state, dry_run, send_setups):
         print("  pending posted" + (" with chart" if chart else " (text only)"))
         return 1
     print("  pending FAILED to send -- will retry next pass")
+    status.error("watch", f"{pair} pending post failed to send")
     return 0
 
 
@@ -240,6 +242,7 @@ def post_setup(pair, result, state, dry_run, send_setups):
         print("  setup posted" + (" with chart" if chart else " (text only)"))
         return 1
     print("  setup FAILED to send -- will retry next pass")
+    status.error("watch", f"{pair} setup post failed to send")
     return 0
 
 
@@ -282,6 +285,7 @@ def post_trade(pair, result, state, dry_run):
         print("  trade alert sent" + (" with chart" if chart else " (text only)"))
         return 1
     print("  trade alert FAILED to send -- will retry next pass")
+    status.error("watch", f"{pair} trade post failed to send")
     return 0
 
 
@@ -295,14 +299,18 @@ def scan_pass(pairs, state, win, dry_run=False, ignore_calendar=False, send_setu
             why = trading_day_block_reason(pair)
             if why:
                 print(f"  {pair}: no trading today -- {why}")
+                status.note_pair(pair, f"not trading today ({why})")
                 continue
 
         try:
             result = run_scan(pair, render_chart_image=False)
         except Exception as e:
             print(f"  {pair}: scan failed -- {e}")
+            status.error("watch", f"{pair} scan failed: {e}")
+            status.note_pair(pair, f"scan failed: {e}")
             continue
 
+        status.note_pair(pair, status.summarize(result))
         if result.get("entry"):
             if not win["trades"]:
                 print(f"  {pair}: entry found but outside 9:00 AM - 12:59 PM ET -- held")
@@ -365,14 +373,19 @@ def main():
         if args.ignore_session:
             win["setups"] = win["trades"] = True
         if win["setups"] or win["trades"]:
-            state = load_state(dry_run=args.dry_run)
-            n = scan_pass(pairs, state, win, dry_run=args.dry_run,
-                          ignore_calendar=args.ignore_calendar, send_setups=send_setups)
-            save_state(state, dry_run=args.dry_run)
-            if n:
-                print(f"  -> {n} new post(s) this pass")
+            try:
+                state = load_state(dry_run=args.dry_run)
+                n = scan_pass(pairs, state, win, dry_run=args.dry_run,
+                              ignore_calendar=args.ignore_calendar, send_setups=send_setups)
+                save_state(state, dry_run=args.dry_run)
+                if n:
+                    print(f"  -> {n} new post(s) this pass")
+            except Exception as e:      # never let one bad pass kill the watcher
+                print(f"  scan pass crashed -- {e} (will retry next pass)")
+                status.error("watch", f"scan pass crashed: {e}")
         else:
             print(f"[{win['label']}] outside 9am-1pm ET -- idle")
+        status.beat("watch", label=win["label"], scanning=bool(win["setups"] or win["trades"]))
 
         heartbeat.ping("HEALTHCHECK_WATCH_URL", min_interval=0)
         if args.once:

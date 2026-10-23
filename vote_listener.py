@@ -14,6 +14,7 @@ person's earlier vote (both rows stay in votes.csv as history).
 import csv
 import html
 import json
+import re
 import time
 from datetime import datetime
 from pathlib import Path
@@ -25,6 +26,10 @@ load_dotenv()
 
 from modules import notifier
 from modules import heartbeat
+from modules import status
+from modules import agent_reviewer
+
+_last_beat = [0.0]
 
 NY_TZ = pytz.timezone("America/New_York")
 VOTES_FILE = Path("votes.csv")
@@ -202,12 +207,34 @@ def _clear_prompts(token: str, uid):
             notifier.pop_pending(key)
 
 
+CHAD_NAME = re.compile(r"\bchad\b", re.I)
+
+
+def _is_reply_to_chad(msg: dict) -> bool:
+    r = msg.get("reply_to_message") or {}
+    return bool((r.get("from") or {}).get("is_bot")) and (r.get("text") or "").rstrip().endswith("-- Chad")
+
+
+def _ask_chad(msg: dict, text: str):
+    asker = _voter_name(msg.get("from") or {})
+    chat_id = (msg.get("chat") or {}).get("id")
+    print(f"[{datetime.now(NY_TZ):%H:%M:%S}] {asker} asked Chad: {text[:80]}")
+    agent_reviewer.answer_async(chat_id, msg.get("message_id"), text, asker)
+
+
 def handle_message(msg: dict):
     reason = (msg.get("text") or "").strip()
     if not reason or reason.startswith("/"):
         return
+    # 1. Talking to Chad by name -> Chad answers (never counted as a vote reason)
+    if CHAD_NAME.search(reason):
+        _ask_chad(msg, reason)
+        return
     key, p = _find_pending_for_reply(msg)
     if not p:
+        # 2. A reply to one of Chad's messages, with no vote waiting -> Chad answers
+        if _is_reply_to_chad(msg):
+            _ask_chad(msg, reason)
         return
 
     token, uid = p["token"], p["user_id"]
@@ -238,6 +265,9 @@ def main():
     while True:
         try:
             heartbeat.ping("HEALTHCHECK_LISTENER_URL", min_interval=60)
+            if time.time() - _last_beat[0] > 30:
+                status.beat("listener")
+                _last_beat[0] = time.time()
             updates = notifier.get_updates(offset=offset, timeout=10)  # short polls: desktop network drops idle connections
             for u in updates:
                 offset = u["update_id"] + 1

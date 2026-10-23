@@ -26,6 +26,7 @@ agent-vs-team agreement can be measured.
 import base64
 import csv
 import html
+import json
 import os
 import re
 import threading
@@ -220,6 +221,11 @@ def _run(sent_result, post_text, chart_path, post_type, chat, pair, signal_id,
                 time.sleep(15 * attempt)
     if text is None:
         print(f"AGENT: giving up on {pair} -- post went out without a review")
+        try:
+            from modules import status
+            status.error("chad", f"couldn't review the {pair} {post_type} post (Foundry connection)")
+        except Exception:
+            pass
         return
     verdict = _verdict(text)
     sign = os.getenv("AGENT_SIGNATURE", "-- Chad")
@@ -255,3 +261,91 @@ def review_async(sent_result, post_text, chart_path=None, post_type="setup",
         args=(sent_result, post_text, chart_path, post_type, chat, pair, signal_id, None, facts),
         daemon=True,
     ).start()
+
+
+# ------------------------------------------------------------------ questions
+
+QA_FILE = ROOT / "agent" / "chad_qa.md"
+
+
+def _today_context() -> str:
+    """Everything Chad knows about today, as plain text."""
+    from modules import news, scorecard, status
+    now = datetime.now(NY_TZ)
+    day = now.strftime("%Y-%m-%d")
+    parts = [f"NOW: {now:%A %b %d %Y, %I:%M %p} ET"]
+
+    ts, w = status.last_beat("watch")
+    parts.append(f"WATCHER: last scan {w.get('label', 'unknown')}" if ts else "WATCHER: no status yet")
+
+    pairs = status.pairs_today()
+    if pairs:
+        parts.append("WHAT EACH PAIR DID TODAY (latest first line, then changes during the day):")
+        for p, d in pairs.items():
+            parts.append(f"{p}: latest at {d.get('time')}: {d.get('outcome')}")
+            for h in d.get("history", [])[-8:]:
+                parts.append(f"   {h}")
+    else:
+        parts.append("WHAT EACH PAIR DID TODAY: no scans recorded today (outside the session, or watcher not running)")
+
+    try:
+        st = json.loads((ROOT / "alert_state.json").read_text(encoding="utf-8"))
+        if st.get("day") == day:
+            ids = st.get("setups_sent", []) + st.get("sent", [])
+            parts.append("POSTED TODAY: " + ("; ".join(ids) if ids else "nothing"))
+    except Exception:
+        pass
+
+    if LOG_FILE.exists():
+        with LOG_FILE.open(newline="", encoding="utf-8") as fh:
+            rows = [r for r in csv.DictReader(fh) if (r.get("reviewed_at") or "").startswith(day)]
+        if rows:
+            parts.append("YOUR REVIEWS TODAY:")
+            for r in rows[-10:]:
+                parts.append(f"{r['reviewed_at'][11:16]} {r['pair']} {r['post_type']} -> {r['verdict']}: "
+                             f"{r['review'][:300]}")
+
+    errs = status.errors_today()
+    if errs:
+        parts.append("ERRORS TODAY: " + " | ".join(f"{e['ts'][11:16]} {e['source']}: {e['msg'][:150]}"
+                                                  for e in errs[-8:]))
+    evs, err = news.red_events(day)
+    parts.append("RED NEWS TODAY: " + (err or ("; ".join(news.line(e) for e in evs) or "none")))
+    parts.append("SCORECARD: " + scorecard.text(day).replace("\n", " "))
+    return "\n".join(parts)
+
+
+def ask(question: str, asker: str = "") -> str:
+    """Answer a teammate's question in the chat, from today's data and the rules."""
+    system = INSTRUCTIONS_FILE.read_text(encoding="utf-8")
+    if QA_FILE.exists():
+        system += "\n\n" + QA_FILE.read_text(encoding="utf-8")
+    body = f"TODAY'S DATA:\n{_today_context()}\n\nQUESTION from {asker or 'a teammate'}:\n{question}"
+    msg = _get_client().messages.create(
+        model=os.getenv("AGENT_REVIEW_MODEL", "claude-opus-5-5"),
+        max_tokens=int(os.getenv("AGENT_REVIEW_MAX_TOKENS", "8000")),
+        system=system,
+        messages=[{"role": "user", "content": body}],
+    )
+    text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
+    return text or "I couldn't put an answer together for that one. Try asking it a different way."
+
+
+def answer_async(chat_id, reply_to_id, question: str, asker: str = ""):
+    """Answer in a background thread so the vote listener keeps polling."""
+    if not enabled():
+        return
+
+    def _go():
+        try:
+            text = ask(question, asker)
+        except Exception as e:
+            print(f"AGENT: question failed ({type(e).__name__}: {e})")
+            text = "I couldn't reach my model just now. Ask me again in a minute."
+        sign = os.getenv("AGENT_SIGNATURE", "-- Chad")
+        reply = (text if len(text) <= 3800 else text[:3790] + "\n...") + "\n\n" + sign
+        notifier._call("sendMessage", {"chat_id": chat_id, "text": reply,
+                                       "reply_to_message_id": reply_to_id})
+        print(f"AGENT: answered {asker}: {question[:60]}")
+
+    threading.Thread(target=_go, daemon=True).start()
