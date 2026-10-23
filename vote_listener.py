@@ -219,6 +219,8 @@ def _ask_chad(msg: dict, text: str):
     asker = _voter_name(msg.get("from") or {})
     chat_id = (msg.get("chat") or {}).get("id")
     print(f"[{datetime.now(NY_TZ):%H:%M:%S}] {asker} asked Chad: {text[:80]}")
+    if _is_reply_to_chad(msg):   # a reply to Chad = feedback he keeps and learns from
+        agent_reviewer.record_feedback(asker, text, (msg.get("reply_to_message") or {}).get("text", ""))
     agent_reviewer.answer_async(chat_id, msg.get("message_id"), text, asker)
 
 

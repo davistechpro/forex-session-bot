@@ -4,20 +4,28 @@ vote_listener.py:
 
     py chad.py
 
-On trading days (Mon-Thu, no bank holidays) Chad posts to the SETUPS chat:
-  8:45 AM   Morning check: are the watcher and the vote listener running,
-            plus today's red-news events for our 7 pairs.
+On trading days (Mon-Thu, no bank holidays) Chad posts to BOTH chats (setups + trades):
+  8:45 AM   Morning check: today's red-news events for our 7 pairs and where
+            oil is (plus a PROBLEM line only if a bot window isn't running).
   9:00-1:00 Watches the bot. Alerts if the watcher stops scanning, the vote
             listener stops polling, or anything throws an error.
             15 minutes before each red-news event: a heads-up.
-  1:05 PM   End-of-day summary: what posted, what each pair did and why,
-            Chad's verdicts, errors, and the scorecard (votes toward 300,
-            bot accuracy, Chad's agreement with the team).
+  9, 10, 11 AM, 12 PM  Hourly update (Gage's spec, Oct 22): oil and how it
+            may be moving our currencies, today's trades and where each one
+            stands (waiting, open +/- pips, stop hit, target hit), and why
+            the other pairs have no trade.
+  Mon 8:50  Weekly oil report: how oil is affecting each of our pairs
+            (also by hand: py chad.py --now oilreport).
+  1:00 PM   Recap of the day, plus the scorecard (votes toward 300, bot
+            accuracy, Chad's agreement with the team).
+
+Replies to Chad's messages are saved as team feedback (chad_feedback.csv)
+and he reads the latest ones before every review, answer and update.
 
 Questions in the chat ("Chad, why didn't GJ post?") are answered by the
 vote listener, since it's the process that reads the chat.
 
-  py chad.py --now morning     run one job right now (morning / summary / check)
+  py chad.py --now morning     run one job right now (morning / update / summary / check / oilreport)
   py chad.py --dry-run         print instead of posting
 """
 import argparse
@@ -42,6 +50,10 @@ SIGN = "\n\n-- Chad"
 WATCH_STALE_MIN = 12      # watcher scans every 5 min
 LISTENER_STALE_MIN = 5    # listener polls every ~10 s
 REALERT_MIN = 30
+# Gage, Oct 22: an update every hour from 9 AM, and a recap at 1 PM.
+# 9 AM waits a few minutes so the first scan has finished.
+UPDATE_SLOTS = [((9, 7), "9 AM update"), ((10, 0), "10 AM update"), ((11, 0), "11 AM update"),
+                ((12, 0), "12 PM update"), ((13, 0), "1 PM recap")]
 
 DRY = False
 
@@ -74,12 +86,14 @@ def save_state(s: dict):
 
 
 def post(text: str):
-    body = html.escape(text) + SIGN
+    body = html.escape(text, quote=False) + SIGN
     if DRY:
         print("---- would post ----\n" + body + "\n--------------------")
         return
-    if not notifier.send_message(body, chat="setups"):
-        print("CHAD: couldn't post to the setups chat")
+    for chat in ("setups", "trades"):          # Chad talks in both groups
+        if not notifier.send_message(body, chat=chat):
+            print(f"CHAD: couldn't post to the {chat} chat")
+            status.error("chad", f"couldn't post to the {chat} chat")
 
 
 def age_min(name: str):
@@ -112,9 +126,17 @@ def health_lines():
 # ------------------------------------------------------------------ jobs
 
 def job_morning(s):
+    # Devin, Oct 22: no "bot is running" lines -- the healthchecks alerts cover that.
+    # Only speak up here if something is actually wrong.
     lines = [f"Morning check, {now():%A %b %d}."]
     for ok, txt in health_lines():
-        lines.append(("OK  " if ok else "PROBLEM  ") + txt)
+        if not ok:
+            lines.append("PROBLEM  " + txt)
+    try:
+        from modules import trade_tracker
+        lines.append("\nOil: " + trade_tracker.oil_text())
+    except Exception:
+        pass
     evs, err = news.red_events()
     if err:
         lines.append(f"\nRed news: {err}. Check the calendar manually.")
@@ -196,29 +218,85 @@ def _chad_verdicts_today():
     return counts
 
 
-def job_summary(s):
-    day = now().strftime("%Y-%m-%d")
-    lines = [f"End of session, {now():%A %b %d}."]
+def _update_data(s, kind: str) -> str:
+    from modules import trade_tracker
+    t = now()
+    day = t.strftime("%Y-%m-%d")
+    parts = [f"TIME: {t:%A %b %d, %I:%M %p} ET ({kind})"]
+    from modules.scan_engine import TEST_FRIDAYS
+    if t.strftime("%Y-%m-%d") in TEST_FRIDAYS:
+        parts.append("NOTE: today is a one-off TEST FRIDAY the team approved. Trading as normal today; Fridays stay off after this.")
+    parts.append("OIL: " + trade_tracker.oil_text())
+    parts.append("PAIR MOVES: " + trade_tracker.pair_moves_text(PAIRS))
+    parts.append("TRADES TODAY:\n" + trade_tracker.trades_text(trade_tracker.trades_report()))
     posts = _posts_today()
-    lines.append(f"\nPosted today ({len(posts)}):" if posts else "\nNothing posted today.")
-    lines += [f"  {p}" for p in posts]
+    parts.append("POSTED TODAY: " + ("; ".join(posts) if posts else "nothing"))
     pairs = status.pairs_today()
-    if pairs:
-        lines.append("\nWhere each pair ended up:")
-        for p in PAIRS:
-            if p in pairs:
-                lines.append(f"  {p.replace('_', '/')}: {pairs[p]['outcome']}")
+    parts.append("WHAT EACH PAIR DID TODAY (latest, then changes):")
+    for p in PAIRS:
+        if p in pairs:
+            parts.append(f"{p}: latest {pairs[p]['time']}: {pairs[p]['outcome']}")
+            parts += [f"   {h}" for h in pairs[p].get("history", [])[-6:]]
+        else:
+            why = trading_day_block_reason(p)
+            parts.append(f"{p}: " + (f"not trading today ({why})" if why else "no scan recorded yet"))
+    soon = []
+    for ev in s.get("news", []):
+        mins = (datetime.fromisoformat(ev["t"]) - t).total_seconds() / 60
+        if 0 < mins <= 75:
+            soon.append(ev["line"])
+    parts.append("RED NEWS IN THE NEXT HOUR: " + ("; ".join(soon) if soon else "none"))
     v = _chad_verdicts_today()
     if v:
-        lines.append("\nMy reviews today: " + ", ".join(f"{k} {n}" for k, n in sorted(v.items())))
+        parts.append("YOUR REVIEWS TODAY: " + ", ".join(f"{k} {n}" for k, n in sorted(v.items())))
     errs = status.errors_today()
     if errs:
-        lines.append(f"\nErrors today: {len(errs)} (last: {errs[-1]['source']}: {errs[-1]['msg'][:120]})")
-    lines.append("\n" + scorecard.text(day))
-    post("\n".join(lines))
+        parts.append(f"ERRORS TODAY: {len(errs)}; last: {errs[-1]['source']}: {errs[-1]['msg'][:150]}")
+    for ok, txt in health_lines():
+        if not ok:
+            parts.append("PROBLEM: " + txt)
+    if "recap" in kind:
+        parts.append("SCORECARD: " + scorecard.text(day).replace("\n", " "))
+    return "\n".join(parts)
 
 
-JOBS = {"morning": job_morning, "check": job_check, "summary": job_summary}
+def job_update(s, kind: str = "hourly update"):
+    """Gage's spec: oil, today's trades and their status, why the other pairs
+    have no trade, red news coming up. 'recap' covers the whole day + scorecard."""
+    data = _update_data(s, kind)
+    try:
+        from modules import agent_reviewer
+        if not agent_reviewer.enabled():
+            raise RuntimeError("agent not configured")
+        text = agent_reviewer.compose(kind, data)
+        if not text:
+            raise RuntimeError("empty reply")
+    except Exception as e:
+        print(f"CHAD: couldn't write the {kind} ({e}) -- posting the raw data")
+        status.error("chad", f"couldn't write the {kind}: {e}")
+        text = f"{kind.capitalize()} (raw data, I couldn't write it up):\n" + data
+    post(text)
+
+
+def job_summary(s):
+    job_update(s, "recap")
+
+
+def job_oil_report(s):
+    """Gage, Oct 22: a high-level report of how oil is affecting the pairs we trade.
+    Weekly (Monday 8:50 AM) or by hand: py chad.py --now oilreport"""
+    from modules import agent_reviewer, trade_tracker
+    data = f"TIME: {now():%A %b %d, %I:%M %p} ET\n" + trade_tracker.oil_week_data(PAIRS)
+    try:
+        text = agent_reviewer.compose("weekly oil report", data)
+    except Exception as e:
+        status.error("chad", f"couldn't write the oil report: {e}")
+        text = "Weekly oil report (raw data, I couldn't write it up):\n" + data
+    post(text)
+
+
+JOBS = {"morning": job_morning, "check": job_check, "update": job_update, "summary": job_summary,
+        "oilreport": job_oil_report}
 
 
 # ------------------------------------------------------------------ loop
@@ -235,7 +313,10 @@ def main():
         s = load_state()
         if args.now == "check" and "news" not in s:
             s["news"] = []
-        JOBS[args.now](s)
+        if args.now == "update":
+            job_update(s, "TEST update, run by hand (not on the hourly schedule)")
+        else:
+            JOBS[args.now](s)
         save_state(s)
         return
 
@@ -253,9 +334,17 @@ def main():
                     job_morning(s)
                 if (8, 50) <= hm <= (13, 2):
                     job_check(s)
-                if hm >= (13, 5) and "summary" not in s["done"] and hm < (17, 0):
-                    s["done"].append("summary")
-                    job_summary(s)
+                if t.weekday() == 0 and hm >= (8, 50) and "oilreport" not in s["done"] and hm < (13, 0):
+                    s["done"].append("oilreport")
+                    save_state(s)
+                    job_oil_report(s)
+                for slot, kind in UPDATE_SLOTS:
+                    key = f"update {slot[0]}:{slot[1]:02d}"
+                    late = (slot[0] * 60 + slot[1] + 40) // 60, (slot[1] + 40) % 60
+                    if slot <= hm < late and key not in s["done"]:
+                        s["done"].append(key)
+                        save_state(s)
+                        job_update(s, kind)
                 save_state(s)
         except KeyboardInterrupt:
             print("\nStopped.")

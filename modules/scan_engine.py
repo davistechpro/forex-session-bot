@@ -123,6 +123,11 @@ def _within_confirmation_age(zone, reference_time) -> bool:
 
 # ------------------------------------------------------------ calendar
 
+# Devin, Oct 22 call: run the bot and Chad on Friday Oct 23 as a one-day test,
+# then back to no Fridays automatically.
+TEST_FRIDAYS = {"2026-10-23"}
+
+
 def trading_day_block_reason(pair: str, when=None) -> str | None:
     """
     Doc 8: no Fridays, no US bank holidays, no pair whose currency has a
@@ -130,7 +135,11 @@ def trading_day_block_reason(pair: str, when=None) -> str | None:
     """
     now_ny = (when or datetime.now(pytz.UTC)).astimezone(NY_TZ)
     # Doc 8: no Fridays. Weekends: market closed, candles are stale Friday data.
-    if now_ny.weekday() in (4, 5, 6):
+    # Exception: one-off test Fridays the team agreed to run (listed below).
+    # Only that exact date is opened; every other Friday stays blocked.
+    if now_ny.weekday() == 4 and now_ny.strftime("%Y-%m-%d") in TEST_FRIDAYS:
+        pass
+    elif now_ny.weekday() in (4, 5, 6):
         return ("Friday", "Saturday", "Sunday")[now_ny.weekday() - 4]
 
     try:

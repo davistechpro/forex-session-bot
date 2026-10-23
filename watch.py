@@ -170,6 +170,7 @@ def post_pending(pair, result, state, dry_run, send_setups):
         state["setups_sent"].append(sid)
         save_state(state)
         agent_reviewer.review_async(ok, text, chart, "pending", "setups", pair, sid, facts=agent_reviewer.facts_from(result))
+        status.record_trade(sid, pair, e, "pending")
         print("  pending posted" + (" with chart" if chart else " (text only)"))
         return 1
     print("  pending FAILED to send -- will retry next pass")
@@ -282,6 +283,7 @@ def post_trade(pair, result, state, dry_run):
         state["sent"].append(sid)
         save_state(state)
         agent_reviewer.review_async(ok, text, chart, "active", "trades", pair, sid, facts=agent_reviewer.facts_from(result))
+        status.record_trade(sid, pair, e, "active")
         print("  trade alert sent" + (" with chart" if chart else " (text only)"))
         return 1
     print("  trade alert FAILED to send -- will retry next pass")

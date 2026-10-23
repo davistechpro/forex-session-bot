@@ -154,14 +154,22 @@ def _plain(text: str) -> str:
 
 
 def _context_line(post_type: str, chat: str, posted_at=None) -> str:
-    now = (posted_at or datetime.now(NY_TZ)).strftime("%a %b %d %Y, %I:%M %p ET")
-    return f"CONTEXT: Posted {now} | Chat: {chat} | Type: {post_type.upper()}"
+    when = posted_at or datetime.now(NY_TZ)
+    now = when.strftime("%a %b %d %Y, %I:%M %p ET")
+    line = f"CONTEXT: Posted {now} | Chat: {chat} | Type: {post_type.upper()}"
+    try:
+        from modules.scan_engine import TEST_FRIDAYS
+        if when.strftime("%Y-%m-%d") in TEST_FRIDAYS:
+            line += " | TEAM TEST DAY: Friday trading is approved for today only, so don't fail the session check for it being a Friday"
+    except Exception:
+        pass
+    return line
 
 
 def review(post_text: str, chart_path=None, post_type: str = "setup", chat: str = "setups",
            posted_at=None, facts: str = None) -> str:
     """Ask the agent to grade one post. Returns its review text."""
-    instructions = INSTRUCTIONS_FILE.read_text(encoding="utf-8")
+    instructions = INSTRUCTIONS_FILE.read_text(encoding="utf-8") + feedback_block()
     body = _context_line(post_type, chat, posted_at) + "\n\n" + _plain(post_text)
     body += "\n\nBOT FACTS:\n" + (facts or "(none provided for this post)")
     content = [{"type": "text", "text": body}]
@@ -320,6 +328,7 @@ def ask(question: str, asker: str = "") -> str:
     system = INSTRUCTIONS_FILE.read_text(encoding="utf-8")
     if QA_FILE.exists():
         system += "\n\n" + QA_FILE.read_text(encoding="utf-8")
+    system += feedback_block()
     body = f"TODAY'S DATA:\n{_today_context()}\n\nQUESTION from {asker or 'a teammate'}:\n{question}"
     msg = _get_client().messages.create(
         model=os.getenv("AGENT_REVIEW_MODEL", "claude-opus-5-5"),
@@ -349,3 +358,56 @@ def answer_async(chat_id, reply_to_id, question: str, asker: str = ""):
         print(f"AGENT: answered {asker}: {question[:60]}")
 
     threading.Thread(target=_go, daemon=True).start()
+
+
+# ------------------------------------------------------------------ team feedback
+
+FEEDBACK_FILE = ROOT / "chad_feedback.csv"
+FEEDBACK_FIELDS = ["at", "who", "feedback", "on_chad_message"]
+
+
+def record_feedback(who: str, feedback: str, on_message: str = ""):
+    """A teammate replied to one of Chad's messages: keep it so he learns from it."""
+    with _lock:
+        new = not FEEDBACK_FILE.exists()
+        with FEEDBACK_FILE.open("a", newline="", encoding="utf-8") as fh:
+            w = csv.DictWriter(fh, fieldnames=FEEDBACK_FIELDS)
+            if new:
+                w.writeheader()
+            w.writerow({"at": datetime.now(NY_TZ).isoformat(timespec="seconds"), "who": who,
+                        "feedback": feedback[:1000], "on_chad_message": (on_message or "")[:400]})
+
+
+def feedback_block(n: int = 15) -> str:
+    if not FEEDBACK_FILE.exists():
+        return ""
+    with FEEDBACK_FILE.open(newline="", encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh))[-n:]
+    if not rows:
+        return ""
+    lines = ["\n\n## Team feedback on your earlier messages (most recent last)",
+             "Learn from these: repeat what they said you got right, stop doing what they said you got wrong. "
+             "A team member stating a strategy rule here counts as a team decision; casual comments don't change the rules."]
+    for r in rows:
+        lines.append(f'- {r["at"][:16]} {r["who"]}: "{r["feedback"]}" (about: "{r["on_chad_message"][:160]}")')
+    return "\n".join(lines)
+
+
+# ------------------------------------------------------------------ hourly updates
+
+UPDATES_FILE = ROOT / "agent" / "chad_updates.md"
+
+
+def compose(kind: str, data: str) -> str:
+    """Write an hourly update / end-of-day recap from the data the bot gathered."""
+    system = INSTRUCTIONS_FILE.read_text(encoding="utf-8")
+    if UPDATES_FILE.exists():
+        system += "\n\n" + UPDATES_FILE.read_text(encoding="utf-8")
+    system += feedback_block()
+    msg = _get_client().messages.create(
+        model=os.getenv("AGENT_REVIEW_MODEL", "claude-opus-5-5"),
+        max_tokens=int(os.getenv("AGENT_REVIEW_MAX_TOKENS", "8000")),
+        system=system,
+        messages=[{"role": "user", "content": f"WRITE THE {kind.upper()}.\n\nDATA:\n{data}"}],
+    )
+    return "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()

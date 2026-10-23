@@ -133,3 +133,31 @@ def errors_today(day: str = None) -> list:
         except Exception:
             pass
     return out
+
+
+# ------------------------------------------------------------------ trades
+
+def record_trade(sid: str, pair: str, entry: dict, kind: str):
+    """Remember a pending/active trade so Chad can follow it (fill, SL, TP)."""
+    key = sid.replace("PENDING|", "")
+    with _lock:
+        path = DIR / f"trades_{_today()}.json"
+        data = _read(path, {})
+        t = data.setdefault(key, {})
+        t.update({
+            "pair": pair, "direction": entry.get("direction"),
+            "entry": entry.get("entry_price"), "stop": entry.get("stop_loss"),
+            "target": entry.get("take_profit"), "sl_pips": entry.get("sl_pips"),
+            "tp_pips": entry.get("tp_pips"), "method": entry.get("method"),
+            "level": entry.get("entry_level"),
+            "triggered_at": str(entry.get("time", "")),
+            "posted_as": kind if not t.get("posted_as") else
+            (t["posted_as"] if t["posted_as"] == "active" else kind),
+        })
+        if entry.get("filled_at") is not None:
+            t["filled_at"] = str(entry["filled_at"])
+        _write(path, data)
+
+
+def trades_today(day: str = None) -> dict:
+    return _read(DIR / f"trades_{day or _today()}.json", {})
