@@ -15,7 +15,29 @@ from modules.data_feed import get_candles
 from modules.scan_engine import pip_size
 
 NY = pytz.timezone("America/New_York")
-OIL = [("WTICO_USD", "US Oil (WTI)"), ("BCO_USD", "Brent crude")]   # US Oil = WTI (TradingView USOIL)
+# Backup only: OANDA's oil CFD sits about $2 off TradingView's USOIL (different contract).
+OIL = [("WTICO_USD", "US Oil (WTI, OANDA feed)"), ("BCO_USD", "Brent crude")]
+# Primary: NYMEX WTI front-month futures, the price TradingView's USOIL tracks.
+YAHOO = "https://query1.finance.yahoo.com/v8/finance/chart/CL=F"
+US_OIL_NAME = "US Oil (WTI)"
+
+
+def us_oil(interval: str = "5m", rng: str = "5d", with_meta: bool = False):
+    """NYMEX WTI front-month candles (time UTC, open/high/low/close).
+    Empty frame if the source can't be reached. with_meta=True also returns
+    the feed's info (previous session close etc.)."""
+    import requests
+    try:
+        r = requests.get(YAHOO, params={"interval": interval, "range": rng},
+                         headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
+        res = r.json()["chart"]["result"][0]
+        q = res["indicators"]["quote"][0]
+        df = pd.DataFrame({"time": pd.to_datetime(res["timestamp"], unit="s", utc=True),
+                           "open": q["open"], "high": q["high"], "low": q["low"], "close": q["close"]})
+        df = df.dropna().reset_index(drop=True)
+        return (df, res.get("meta", {})) if with_meta else df
+    except Exception:
+        return (pd.DataFrame(), {}) if with_meta else pd.DataFrame()
 
 
 def _et(ts):
@@ -103,7 +125,21 @@ def trades_text(rows: list) -> str:
 
 def oil_text() -> str:
     """Gage, Oct 22: how oil is moving for the day and for the hour (% up/down)
-    and how volatile it is. OANDA may not offer oil on every account."""
+    and how volatile it is. NYMEX WTI front month first (matches TradingView
+    USOIL), OANDA only as a backup."""
+    # Current futures session only (it opens 6 PM ET), measured against the
+    # previous session's close -- the same way TradingView shows the day's change.
+    m5, meta = us_oil("5m", "1d", with_meta=True)
+    prev_close = meta.get("chartPreviousClose") or meta.get("previousClose")
+    if len(m5) and prev_close:
+        last = m5["close"].iloc[-1]
+        day_chg = (last - prev_close) / prev_close * 100
+        hour_ago = m5[m5["time"] <= m5["time"].iloc[-1] - pd.Timedelta(hours=1)]
+        hr = (f", {(last - hour_ago['close'].iloc[-1]) / hour_ago['close'].iloc[-1] * 100:+.2f}% in the last hour"
+              if len(hour_ago) else "")
+        lo, hi = m5["low"].min(), m5["high"].max()
+        rng = f", session range {lo:.2f}-{hi:.2f} ({(hi - lo) / lo * 100:.2f}% wide)"
+        return f"{US_OIL_NAME} {last:.2f}, {day_chg:+.2f}% today{hr}{rng}"
     for inst, name in OIL:
         try:
             m5 = get_candles(inst, "M5", count=300)
@@ -124,10 +160,7 @@ def oil_text() -> str:
         if len(today):
             lo, hi = today["low"].min(), today["high"].max()
             rng = f", today's range {lo:.2f}-{hi:.2f} ({(hi - lo) / lo * 100:.2f}% wide)"
-        # % moves first: OANDA's price can sit a dollar or two off TradingView's
-        # USOIL (different feed / contract month), but the % moves track closely.
-        return (f"{name} {day_chg:+.2f}% today{hr}{rng}. "
-                f"(OANDA price {last:.2f}; TradingView USOIL can differ by a dollar or two)")
+        return f"{name} {last:.2f}, {day_chg:+.2f}% today{hr}{rng}"
     return "Oil price not available from our OANDA account."
 
 
@@ -154,7 +187,10 @@ def oil_week_data(pairs) -> str:
     hourly % changes over the last ~5 trading days: +1 = moved together,
     -1 = moved opposite, near 0 = no link)."""
     oil, name = None, None
-    for inst, nm in OIL:
+    h = us_oil("60m", "1mo")
+    if len(h):
+        oil, name = h.tail(120).reset_index(drop=True), US_OIL_NAME
+    for inst, nm in ([] if oil is not None else OIL):
         try:
             h = get_candles(inst, "H1", count=120)
             if len(h):
@@ -166,17 +202,19 @@ def oil_week_data(pairs) -> str:
         return "Oil price not available from our OANDA account."
     lines = []
     try:
-        d = get_candles(OIL[[n for _, n in OIL].index(name)][0], "D", count=6)
+        d = (us_oil("1d", "10d").tail(6) if name == US_OIL_NAME
+             else get_candles(OIL[[n for _, n in OIL].index(name)][0], "D", count=6))
         moves = [f"{pd.Timestamp(r.time).tz_convert(NY):%a} {((r.close - r.open) / r.open * 100):+.2f}%"
                  for r in d.itertuples()]
         lines.append(f"{name} daily moves: " + ", ".join(moves))
     except Exception:
         pass
+    oil = oil.assign(time=oil["time"].dt.floor("h")).drop_duplicates("time", keep="last")
     o = oil.set_index("time")["close"].pct_change()
     for p in pairs:
         try:
             ph = get_candles(p, "H1", count=120).set_index("time")["close"]
-            corr = o.corr(ph.pct_change())
+            corr = pd.concat([o, ph.pct_change()], axis=1, join="inner").corr().iloc[0, 1]
             pd_ = get_candles(p, "D", count=6)
             wk = (pd_["close"].iloc[-1] - pd_["open"].iloc[0]) / pip_size(p)
             lines.append(f"{p}: hourly correlation with oil {corr:+.2f}, {wk:+.0f} pips over the last ~5 days")
