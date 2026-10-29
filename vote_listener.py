@@ -216,7 +216,32 @@ def _is_reply_to_chad(msg: dict) -> bool:
     return bool((r.get("from") or {}).get("is_bot")) and (r.get("text") or "").rstrip().endswith("-- Chad")
 
 
+CONFIRM_RE = re.compile(r"^\s*(chad[\s,:]*)?(confirm(ed)?|approved?|yes,? save( it)?|save it)\b", re.I)
+
+
+def _confirm_rule(msg: dict, text: str) -> bool:
+    """Devin, Oct 28 call: the team can grow Chad's rules from the chat. When Chad
+    ends a self-review with 'Proposed rule: ...' and a teammate replies 'confirm',
+    the rule is saved to agent/team_rules.md and Chad uses it from then on."""
+    if not (_is_reply_to_chad(msg) and CONFIRM_RE.match(text)):
+        return False
+    rule = agent_reviewer.proposed_rule((msg.get("reply_to_message") or {}).get("text", ""))
+    if not rule:
+        return False
+    who = _voter_name(msg.get("from") or {})
+    agent_reviewer.save_team_rule(who, rule)
+    print(f"[{datetime.now(NY_TZ):%H:%M:%S}] {who} confirmed a Chad rule: {rule[:80]}")
+    notifier._call("sendMessage", {
+        "chat_id": (msg.get("chat") or {}).get("id"),
+        "text": f"Saved as a team rule (confirmed by {who}): {rule}\n\n-- Chad",
+        "reply_to_message_id": msg.get("message_id"),
+    })
+    return True
+
+
 def _ask_chad(msg: dict, text: str):
+    if _confirm_rule(msg, text):
+        return
     asker = _voter_name(msg.get("from") or {})
     chat_id = (msg.get("chat") or {}).get("id")
     print(f"[{datetime.now(NY_TZ):%H:%M:%S}] {asker} asked Chad: {text[:80]}")
@@ -267,6 +292,9 @@ def handle_message(msg: dict):
     log_chat(msg)
     reason = (msg.get("text") or "").strip()
     if not reason or reason.startswith("/"):
+        return
+    # 0. "confirm" under a Chad "Proposed rule" message -> saved as a team rule
+    if _confirm_rule(msg, reason):
         return
     # 1. Talking to Chad by name -> Chad answers (never counted as a vote reason)
     if CHAD_NAME.search(reason):

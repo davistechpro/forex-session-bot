@@ -30,7 +30,7 @@ import pytz
 import pandas as pd
 
 from modules.data_feed import get_candles
-from modules.zone_detector import detect_zones
+from modules.zone_detector import detect_zones, TF_MINUTES
 from modules.trend import determine_trend
 from modules.chart_render import render_chart
 from modules.confirmation_entry import find_confirmation_entry
@@ -52,8 +52,8 @@ WICK_TAP_TOLERANCE_PIPS = 20
 ZONE_WINDOW_START = (6, 0)
 ZONE_WINDOW_END = (13, 0)   # exclusive
 
-# Minutes per candle, used to find when a zone's push candle CLOSES.
-TF_MINUTES = {"H4": 240, "H1": 60, "15": 15, "5": 5, "1": 1}
+# TF_MINUTES (minutes per candle) now lives in modules/zone_detector.py so the
+# zone detector and the scan engine agree on when a zone is ready.
 
 # Currency -> holiday calendar (doc 8).
 CURRENCY_COUNTRY = {"USD": "US", "CAD": "CA", "JPY": "JP", "GBP": "GB", "EUR": "ECB"}

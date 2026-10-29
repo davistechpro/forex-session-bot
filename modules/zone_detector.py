@@ -4,13 +4,30 @@ TradingView indicator (v49), including overlap-dedup, plus a body-close
 invalidation rule.
 
 MITIGATION -- a zone clears when EITHER:
-  1. WICK RETEST: price wicks back into the zone from the opposite side.
+  1. WICK RETEST: price wicks back into the zone from the opposite side,
+     but only once the zone is READY (Gage, Oct 20: "a wick tap before the
+     zone is ready does not kill the trigger"). A zone is ready when the
+     candle AFTER the confirming push candle has closed, i.e.
+     confirmed_time + 2 candles of its own timeframe -- the same rule
+     scan_engine.zone_ready_time uses. A wick into the zone during that
+     next candle is the zone still forming, not a retest.
   2. BODY-CLOSE BREAK: a candle BODY closes THROUGH the zone against it --
-     above a supply zone's top, or below a demand zone's bottom. Price
-     closing AWAY from a zone (below a supply, above a demand) is the
-     zone WORKING, not failing, and must not clear it.
+     above a supply zone's top, or below a demand zone's bottom. This
+     clears the zone at any time, ready or not. Price closing AWAY from a
+     zone (below a supply, above a demand) is the zone WORKING, not
+     failing, and must not clear it.
 """
 import pandas as pd
+
+# Minutes per candle, keyed by the timeframe label passed to detect_zones.
+TF_MINUTES = {"H4": 240, "H1": 60, "15": 15, "5": 5, "1": 1}
+
+
+def ready_time(zone):
+    """When the zone exists for real: the close of the candle after the
+    confirming push candle (confirmed_time is that candle's OPEN time)."""
+    minutes = TF_MINUTES.get(zone.get("timeframe"), 60)
+    return zone["confirmed_time"] + pd.Timedelta(minutes=2 * minutes)
 
 
 def _is_red(row) -> bool:
@@ -111,15 +128,18 @@ def detect_zones(candles: pd.DataFrame, timeframe_label: str = "") -> list:
                 continue
             if row["time"] <= zone["confirmed_time"]:
                 continue
+            # Gage, Oct 20: a wick before the zone is ready does not kill it.
+            # Only a body close through the zone counts until then.
+            ready = row["time"] >= ready_time(zone)
 
             if zone["type"] == "supply":
-                wick_retest = is_green and row["high"] >= zone["bottom"]
+                wick_retest = ready and is_green and row["high"] >= zone["bottom"]
                 body_break = row["close"] > zone["top"]
                 if wick_retest or body_break:
                     zone["mitigated"] = True
                     zone["mitigated_time"] = row["time"]
             elif zone["type"] == "demand":
-                wick_retest = is_red and row["low"] <= zone["top"]
+                wick_retest = ready and is_red and row["low"] <= zone["top"]
                 body_break = row["close"] < zone["bottom"]
                 if wick_retest or body_break:
                     zone["mitigated"] = True

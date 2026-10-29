@@ -169,7 +169,7 @@ def _context_line(post_type: str, chat: str, posted_at=None) -> str:
 def review(post_text: str, chart_path=None, post_type: str = "setup", chat: str = "setups",
            posted_at=None, facts: str = None) -> str:
     """Ask the agent to grade one post. Returns its review text."""
-    instructions = INSTRUCTIONS_FILE.read_text(encoding="utf-8") + feedback_block()
+    instructions = INSTRUCTIONS_FILE.read_text(encoding="utf-8") + rules_block() + feedback_block()
     body = _context_line(post_type, chat, posted_at) + "\n\n" + _plain(post_text)
     body += "\n\nBOT FACTS:\n" + (facts or "(none provided for this post)")
     content = [{"type": "text", "text": body}]
@@ -196,7 +196,13 @@ def review(post_text: str, chart_path=None, post_type: str = "setup", chat: str 
 
 
 def _verdict(text: str) -> str:
-    m = re.search(r"VERDICT:\s*(VALID|INVALID|UNSURE)", text or "", re.I)
+    """v0.9 format puts the verdict word on line 1 (after a symbol); older
+    replies ended with 'Verdict: ...'. Accept both."""
+    text = text or ""
+    m = re.search(r"VERDICT:\s*(VALID|INVALID|UNSURE)", text, re.I)
+    if not m:
+        first = text.strip().splitlines()[0] if text.strip() else ""
+        m = re.search(r"\b(INVALID|VALID|UNSURE)\b", first, re.I)
     return m.group(1).upper() if m else "UNKNOWN"
 
 
@@ -313,6 +319,12 @@ def _today_context() -> str:
                 parts.append(f"{r['reviewed_at'][11:16]} {r['pair']} {r['post_type']} -> {r['verdict']}: "
                              f"{r['review'][:300]}")
 
+    chat = chat_today(day)
+    if chat:
+        parts.append("TEAM CHAT TODAY (who said what, oldest first; the team's replies to you and their "
+                     "votes are here):")
+        parts += chat
+
     errs = status.errors_today()
     if errs:
         parts.append("ERRORS TODAY: " + " | ".join(f"{e['ts'][11:16]} {e['source']}: {e['msg'][:150]}"
@@ -323,12 +335,70 @@ def _today_context() -> str:
     return "\n".join(parts)
 
 
+def chat_today(day: str = None, limit: int = 60) -> list:
+    """Today's group chat from chat_log.csv as short lines, for Chad's self-review.
+    Bot trade posts are cut to their first line; team and Chad messages to ~220 chars."""
+    try:
+        if not notifier.CHAT_LOG.exists():
+            return []
+        day = day or datetime.now(NY_TZ).strftime("%Y-%m-%d")
+        out = []
+        with notifier.CHAT_LOG.open(newline="", encoding="utf-8") as fh:
+            for r in csv.DictReader(fh):
+                if not (r.get("at_et") or "").startswith(day):
+                    continue
+                text = (r.get("text") or "").replace("\n", " / ")
+                if r.get("from") == "OPT bot":
+                    text = text.split(" / ")[0][:120]
+                else:
+                    text = text[:220]
+                tail = f' (replying to: "{r["reply_to"][:60]}")' if r.get("reply_to") else ""
+                out.append(f"{r['at_et'][11:16]} [{r.get('chat')}] {r.get('from')}: {text}{tail}")
+        return out[-limit:]
+    except Exception as e:
+        return [f"(chat log unavailable: {e})"]
+
+
+# ------------------------------------------------------------------ team rules (confirmed in chat)
+
+RULES_FILE = ROOT / "agent" / "team_rules.md"
+PROPOSED_RE = re.compile(r"^\s*Proposed rule:\s*(.+?)\s*$", re.I | re.M)
+
+
+def proposed_rule(chad_message: str):
+    """The 'Proposed rule: ...' line from one of Chad's messages, or None."""
+    m = PROPOSED_RE.search(chad_message or "")
+    return m.group(1).strip() if m else None
+
+
+def save_team_rule(who: str, rule: str) -> str:
+    """A teammate replied 'confirm' to a proposed rule: append it to agent/team_rules.md
+    (in git, so Devin can review and revert it like any other change)."""
+    with _lock:
+        new = not RULES_FILE.exists()
+        with RULES_FILE.open("a", encoding="utf-8") as fh:
+            if new:
+                fh.write("# Team rules (confirmed in the chat)\n\n"
+                         "Each line was proposed by Chad from something a teammate said in Telegram and "
+                         "confirmed by a teammate replying \"confirm\". They count like the rules in "
+                         "trade_reviewer.md. Delete a line to retire the rule.\n\n")
+            fh.write(f"- {datetime.now(NY_TZ):%Y-%m-%d %I:%M %p} ET, confirmed by {who}: {rule}\n")
+    return rule
+
+
+def rules_block() -> str:
+    if not RULES_FILE.exists():
+        return ""
+    body = RULES_FILE.read_text(encoding="utf-8").strip()
+    return "\n\n" + body if body else ""
+
+
 def ask(question: str, asker: str = "") -> str:
     """Answer a teammate's question in the chat, from today's data and the rules."""
     system = INSTRUCTIONS_FILE.read_text(encoding="utf-8")
     if QA_FILE.exists():
         system += "\n\n" + QA_FILE.read_text(encoding="utf-8")
-    system += feedback_block()
+    system += rules_block() + feedback_block()
     body = f"TODAY'S DATA:\n{_today_context()}\n\nQUESTION from {asker or 'a teammate'}:\n{question}"
     msg = _get_client().messages.create(
         model=os.getenv("AGENT_REVIEW_MODEL", "claude-opus-5-5"),
@@ -354,7 +424,7 @@ def answer_async(chat_id, reply_to_id, question: str, asker: str = ""):
         sign = os.getenv("AGENT_SIGNATURE", "-- Chad")
         reply = (text if len(text) <= 3800 else text[:3790] + "\n...") + "\n\n" + sign
         notifier._call("sendMessage", {"chat_id": chat_id, "text": reply,
-                                       "reply_to_message_id": reply_to_id})
+                                       "reply_to_message_id": reply_to_id})  # a direct answer buzzes the asker
         print(f"AGENT: answered {asker}: {question[:60]}")
 
     threading.Thread(target=_go, daemon=True).start()
@@ -403,7 +473,7 @@ def compose(kind: str, data: str) -> str:
     system = INSTRUCTIONS_FILE.read_text(encoding="utf-8")
     if UPDATES_FILE.exists():
         system += "\n\n" + UPDATES_FILE.read_text(encoding="utf-8")
-    system += feedback_block()
+    system += rules_block() + feedback_block()
     msg = _get_client().messages.create(
         model=os.getenv("AGENT_REVIEW_MODEL", "claude-opus-5-5"),
         max_tokens=int(os.getenv("AGENT_REVIEW_MAX_TOKENS", "8000")),

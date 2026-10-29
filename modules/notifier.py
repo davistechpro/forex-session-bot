@@ -197,12 +197,16 @@ def _after_send(result, signal_id, chat_id, is_photo, text):
     return result
 
 
-def send_message(text: str, signal_id: str = None, chat: str = "trades"):
+def send_message(text: str, signal_id: str = None, chat: str = "trades", silent: bool = False):
+    """silent=True delivers without a phone notification (Chad's routine posts,
+    so only the bot's trades and real alerts buzz the team -- Oct 28 call)."""
     chat_id = _chat_id(chat)
     if not chat_id:
         print(f"NOTIFIER: no chat id set for '{chat}'")
         return None
     payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
+    if silent:
+        payload["disable_notification"] = True
     if signal_id:
         payload["reply_markup"] = vote_keyboard(short_token(signal_id))
     return _after_send(_call("sendMessage", payload), signal_id, chat_id, False, text)

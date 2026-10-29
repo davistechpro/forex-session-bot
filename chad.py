@@ -85,13 +85,20 @@ def save_state(s: dict):
     STATE.write_text(json.dumps(s, indent=1), encoding="utf-8")
 
 
-def post(text: str):
+BOTH = ("setups", "trades")
+
+
+def post(text: str, chats=BOTH, loud: bool = False):
+    """Oct 28 call (Gage, Steven, Devin): Chad was too noisy. Routine posts go out
+    silently (no phone buzz); only real alerts are loud. Hourly updates go to the
+    setups chat only; the morning note and the 1 PM recap still go to both."""
     body = html.escape(text, quote=False) + SIGN
     if DRY:
-        print("---- would post ----\n" + body + "\n--------------------")
+        print(f"---- would post to {', '.join(chats)}{' (loud)' if loud else ''} ----\n"
+              + body + "\n--------------------")
         return
-    for chat in ("setups", "trades"):          # Chad talks in both groups
-        if not notifier.send_message(body, chat=chat):
+    for chat in chats:
+        if not notifier.send_message(body, chat=chat, silent=not loud):
             print(f"CHAD: couldn't post to the {chat} chat")
             status.error("chad", f"couldn't post to the {chat} chat")
 
@@ -158,7 +165,7 @@ def _alert_once(s, key, text):
     if last and (now() - datetime.fromisoformat(last)) < timedelta(minutes=REALERT_MIN):
         return
     s["alerts"][key] = now().isoformat(timespec="seconds")
-    post(text)
+    post(text, loud=True)
 
 
 def job_check(s):
@@ -168,7 +175,7 @@ def job_check(s):
             _alert_once(s, key, "Heads up: " + txt)
         elif key in s["alerts"]:
             s["alerts"].pop(key)
-            post(f"Back to normal: {txt}")
+            post(f"Back to normal: {txt}", loud=True)
     errs = status.errors_today()
     new = errs[s.get("errors_seen", 0):]
     if new:
@@ -176,14 +183,14 @@ def job_check(s):
         shown = new[-5:]
         lines = [f"{len(new)} new error(s) from the bot:"]
         lines += [f"{e['ts'][11:16]} {e['source']}: {e['msg'][:200]}" for e in shown]
-        post("\n".join(lines))
+        post("\n".join(lines), loud=True)
     # red-news heads-up 15 min before
     for ev in s.get("news", []):
         t = datetime.fromisoformat(ev["t"])
         mins = (t - now()).total_seconds() / 60
         if 0 < mins <= 15 and ev["t"] not in s["news_warned"]:
             s["news_warned"].append(ev["t"])
-            post(f"Red news in {mins:.0f} min: {ev['line']}")
+            post(f"Red news in {mins:.0f} min: {ev['line']}", loud=True)
 
 
 def _posts_today():
@@ -275,7 +282,8 @@ def job_update(s, kind: str = "hourly update"):
         print(f"CHAD: couldn't write the {kind} ({e}) -- posting the raw data")
         status.error("chad", f"couldn't write the {kind}: {e}")
         text = f"{kind.capitalize()} (raw data, I couldn't write it up):\n" + data
-    post(text)
+    # hourly updates: setups chat only; the 1 PM recap: both chats
+    post(text, chats=BOTH if kind == "recap" else ("setups",))
 
 
 def job_summary(s):

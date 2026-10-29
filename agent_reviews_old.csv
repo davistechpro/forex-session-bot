@@ -1,0 +1,269 @@
+reviewed_at,post_type,chat,pair,signal_token,verdict,review
+2026-10-20T04:17:45-04:00,setup,setups,GBP_USD,,VALID,"Yo fellas. GU short off the 1H supply at 1.33194-1.33324: green 13:00 origin candle, then the 14:00 red pushes down and closes around 1.3317, under the box with no wick back up. The axis looks like UTC, so 13:00 lines up with the 9 AM ET formation the bot posted.
+
+Posted 11 AM Monday, so we're inside the window. A same-day zone means waiting on a 15m/5m wick tap is the right play. Heads up though: the 14:00 confirming candle only closed at 11 AM ET, so the next 1H has to close at noon before any tap counts, which leaves basically 12:00 to 12:59.
+
+Lowkey sketchy on the plan: entry 1.33177 sits under the box, not at that 15m 1.33210-1.33286 or the 5m 1.33254. It's also running the confirmation-style 8/16 instead of a 2R on the tap trade. Can't see the Daily/4H from a 1H chart, so I'm trusting the bot on the 4H+1H bearish call.
+Verdict: VALID (fix that entry before it triggers)"
+2026-10-20T04:44:27-04:00,setup,setups,GBP_USD,,VALID,"Yo fellas. GU 1H supply at 1.33194-1.33324 off the little green 9 AM candle (the 13:00 bar, so the chart looks like it's in UTC), then the 10 AM red smacked down and closed at 1.33174, under the box. Nothing's come back into it yet, so it's fresh, no cap.
+
+Monday 11 AM is inside the window, and since this zone formed this morning, waiting on a 15m/5m wick tap is the right play. One thing though: the 11 AM candle has to close at noon before a tap counts. Can't see the Daily or 4H from here, so I'm trusting the bot on the 4H+1H bearish call.
+
+Heads up on the trade plan: entry at 1.33177 sits under the zone, and that 8/16 pip math is the 1m confirmation setup, not a wick-tap trade. It should be the 15m at 1.33210 with a 2R target.
+Verdict: VALID (fix that entry before it fires)"
+2026-10-20T04:45:54-04:00,setup,setups,GBP_USD,,VALID,"Yo fellas. GU short off the 1H supply at 1.33194-1.33324: the green 9 AM ET candle (13:00 on the chart, which runs in UTC) got smacked by the next red, which closed at 1.33174. Nothing's wicked back into the box since, so it's fresh, no cap.
+
+Monday 11 AM is inside the window, and since the zone formed this morning, waiting on a 15m/5m wick tap is the right play. Heads up though: that confirming candle only just closed at 11, so the zone isn't ready till the next 1H closes at 12 PM ET, and a tap before noon shouldn't count.
+
+The ""if it triggers"" plan is lowkey busted: entry 1.33177 sits under the zone, and the 8/16 split is the confirmation-trade setup, not a wick-tap one. The first zone price hits inside the box is the 15m at 1.33210, so that's where entry should be. Can't see the Daily or 4H from here, so I'm trusting the bot on the trend.
+Verdict: VALID (zone's not ready till 12 PM, and fix that entry)"
+2026-10-20T09:02:05-04:00,setup,setups,GBP_CAD,0f507aa9,UNSURE,"NO IMAGE RECEIVED
+Yo fellas, GBP/CAD short off the 4H supply at 1.88634-1.88968, but there's no chart on this one, so I can't eyeball the push pattern or whether price has wicked back into that box since it formed. The Daily+4H bearish call and the zone being ready before any retest are the bot's word for now too.
+
+What does check out: it posted Tuesday at 9:01 AM ET, so we're inside the window, no cap. The zone's from Friday the 16th at 5 AM, only 4 days old, so waiting on the 1m confirmation instead of a wick tap is the right play.
+
+Timing and trigger are clean. Somebody drop the 4H chart so we can confirm the zone's still fresh before we vote.
+Verdict: UNSURE (need the chart)"
+2026-10-20T09:02:06-04:00,setup,setups,GBP_CAD,0f507aa9,VALID,"NO IMAGE RECEIVED
+Sup gang. GJ's cousin GBP_CAD short off the 4H supply at 1.88634-1.88968, posted Tue 9:01 AM ET, so we're barely inside the window and no holiday for either side, we chillin.
+
+Zone's from Fri Oct 16 at 5 AM, so it's 4 days old and inside the 7-day limit, which means waiting on the 1m confirmation is the right play, not a wick tap. Daily+4H bearish into a supply short lines up.
+
+No chart though, so I can't confirm the push pattern, that the zone's still untouched since Friday, or the trend itself. One small thing: if it triggers but entry isn't hit yet, it should stay in setups as PENDING, not jump straight to trades.
+Verdict: VALID (no chart, zone and trend unchecked)"
+2026-10-20T09:02:06-04:00,setup,setups,GBP_CAD,0f507aa9,VALID,"NO IMAGE RECEIVED
+
+Yo fellas, GJ's cousin GBP/CAD short off the 4H supply at 1.88634-1.88968, posted Tuesday 9:01 AM, so we're just inside the window. Daily and 4H both bearish is the 2-of-3 we need for a short from supply.
+
+Zone printed Fri Oct 16 at 5 AM, so it's 4 days old, and waiting on the 1m confirmation instead of a wick tap is the right play. No chart came through, so I can't check the push pattern, whether the zone's still untouched, or whether the next 4H candle closed before price came back. I'm trusting the bot on all that.
+
+Small thing: if it triggers but entry doesn't fill, that's PENDING and should stay in setups, not trades.
+Verdict: VALID (need the chart to confirm the zone)"
+2026-10-20T09:02:08-04:00,setup,setups,GBP_CAD,0f507aa9,VALID,"NO IMAGE RECEIVED
+Yo fellas, no chart came through, so I'm reading this GBP/CAD short off the text: 4H supply at 1.88634-1.88968, formed Fri Oct 16 at 5 AM. Tuesday 9:01 AM is inside the window. That zone is 4 days old, so waiting on the 1m confirmation instead of a wick tap is the right call.
+
+Daily+4H bearish lines up for a short from supply. Without the chart I can't confirm the trend, the push pattern, or that nothing has wicked back into that box since Friday. Heads up too: if it triggers before the entry gets hit, it should sit in setups as PENDING, not go straight to the trades chat.
+Verdict: VALID (need the chart to confirm the zone's still fresh)"
+2026-10-20T09:02:23-04:00,setup,setups,USD_JPY,82777384,VALID,"Yo fellas. UJ short off the 4H supply at 158.478-158.600. The box starts on that 5 PM ET Monday candle, and bro, that zone got dumped hard: the 1H candle that opened right after closed around 158.27, and the next one closed near 158.19. Since then the best price has done is wick up to about 158.28, so nothing's come back near 158.478 and the zone's still fresh, no cap.
+
+Posted 9:02 AM Tuesday, so we're in the window. The zone's from Monday, so waiting on the 1m confirmation instead of a wick tap is the right play.
+
+Just know price is sitting around 158.04, roughly 44 pips under the box, so it needs a real pullback before anything triggers. The 1H is clearly stepping lower, but I can't see the 4H or Daily from this chart, so I'm trusting the bot on the 4H+1H trend.
+
+Verdict: VALID (needs a 44-pip pullback first)"
+2026-10-20T09:02:24-04:00,setup,setups,USD_JPY,82777384,VALID,"Yo fellas. UJ short off the 4H supply at 158.478-158.600. The green 4H origin candle starts at the 21:00 mark on the chart, which lines up with the bot's 5 PM ET Monday, and it topped right at 158.60. The next 4H candle then dumped and closed way under the box around 158.18, so that's a clean push, no cap.
+
+Price hasn't come anywhere near the zone since. The best it did was a wick to about 158.28, so the zone is still fresh, and the next 4H candle closed well before any return. Posted 9:02 AM Tuesday puts us inside the window. Since the zone is from yesterday, waiting on the 1m confirmation instead of a wick tap is the right play.
+
+Just know price is sitting around 158.04, roughly 44 pips under the box, so it needs a real rally back before anything triggers. I can't see the Daily or 4H from this 1H chart, so I'm trusting the bot on the 4H+1H trend call, though the 1H structure definitely leans bearish.
+Verdict: VALID"
+2026-10-20T09:02:32-04:00,setup,setups,USD_CAD,09cb1d65,UNSURE,"NO IMAGE RECEIVED
+Sup gang. UCAD short off the 4H supply at 1.40924-1.41126, formed Mon Oct 19 at 1 PM ET, but no chart came through, so I can't see the box, the push candles, or whether price wicked back in overnight.
+
+Timing's clean: Tuesday 9:02 AM ET is inside the window, and Oct 20 isn't a US or Canadian bank holiday. The zone's from yesterday and only a day old, so waiting on the 1m confirmation instead of a wick tap is the right play.
+
+Without the screenshot I can't check the 3-of-3 bearish trend, the push pattern, whether it's still fresh, or whether the next 4H candle closed before any trigger, so I'm not stamping this blind. Small thing too: if it triggers but the entry isn't hit yet, that's PENDING and stays in setups, not trades.
+Verdict: UNSURE (need the chart)"
+2026-10-20T09:02:32-04:00,setup,setups,USD_CAD,09cb1d65,UNSURE,"NO IMAGE RECEIVED
+
+Yo fellas. UCAD short off the 4H supply at 1.40924-1.41126, posted Tuesday 9:02 AM, so we're inside the window and there's no holiday on either side. The zone formed yesterday at 1 PM, so waiting on the 1m confirmation instead of a wick tap is the right play, and it's well inside the 7-day limit.
+
+Problem is there's no chart, bro. I can't see the push pattern, whether the box got wicked or closed through overnight, or the 3-of-3 trend, so the zone itself is a total blind spot. Also, small heads up: if it triggers but the entry isn't hit, it stays in setups as PENDING. It only moves to trades once the entry's actually hit.
+Verdict: UNSURE (need the chart to confirm the zone's real and fresh)"
+2026-10-20T09:03:12-04:00,setup,setups,USD_JPY,82777384,VALID,"Yo fellas. UJ short off the 4H supply at 158.478-158.600. The base candles around Monday 5 PM ET pushed into 158.60, then the 4H after it dumped through the zone low with that big red bar closing near 158.27. Price never came back up; the best it did was a wick around 158.25, so the zone's fresh and fully ready.
+
+Posted 9:02 AM Tuesday, so we're good on the window. Zone's from yesterday, not this morning, so waiting on the 1m confirmation instead of a wick tap is the right call, no cap. Price is chillin way down near 158.04-158.15, about 33 pips under the box, so it's a waiting game for now.
+
+1H is clearly stepping lower, but I can't see the Daily or 4H trend from here, so I'm trusting the bot on the 2-of-3. I'm also assuming the chart times are UTC, which lines the zone up with that 5 PM ET formation.
+Verdict: VALID (still needs the 1m confirmation)"
+2026-10-20T09:03:12-04:00,setup,setups,USD_CAD,09cb1d65,VALID,"NO IMAGE RECEIVED
+Yo fellas, UCAD short off the 4H supply at 1.40924-1.41126, but there's no chart on this one, so I'm working off the text only. Posted 9:02 AM Tuesday, so we're right inside the window, and no CAD or USD holiday today.
+
+Zone's from Monday 1 PM ET, which is an earlier day and well within 7 days, so waiting on the 1m confirmation instead of a wick tap is the right play. No cap though, without the chart I can't verify the 3-of-3 bearish trend, whether that push pattern is real, whether the zone's still fresh, or whether the next 4H candle closed before price came back.
+
+Small note: if it triggers but entry isn't hit yet, the docs say it stays in setups as PENDING, not trades. Somebody send the chart.
+Verdict: VALID (on paper only, need the chart)"
+2026-10-20T09:03:15-04:00,setup,setups,USD_JPY,82777384,VALID,"Yo fellas. UJ 4H supply at 158.478-158.600 off Monday's 5 PM ET candle: green origin running about 158.487 up to 158.58, then the next 4H closed way down at about 158.185 by 1 AM ET. That's a clean push, no cap. Price hasn't been back near the box since, so it's still fresh.
+
+Posted 9:02 AM Tuesday, so we're in the window. The zone's from an earlier day and didn't form in the 6 AM-1 PM window, so waiting on the 1m confirmation instead of a wick tap is the right call. The next 4H already closed at 5 AM ET too, so the zone's ready.
+
+Heads up though, price is chillin around 158.04, roughly 44 pips under the box, so it's got some climbing to do. 1H is bearish no doubt, but I can't see the Daily or the 4H trend from this chart, so I'm trusting the bot on the 4H+1H call.
+Verdict: VALID (long way back to the zone)"
+2026-10-20T09:04:11-04:00,setup,setups,USD_CAD,09cb1d65,UNSURE,"NO IMAGE RECEIVED
+Yo fellas. UCAD short off the 4H supply at 1.40924-1.41126, posted Tuesday 9:02 AM ET, so we're just inside the window, and there's no holiday on either side since Columbus Day and Canadian Thanksgiving were both Oct 12.
+
+The zone's from Monday 1 PM, so it's from an earlier day, and waiting on the 1m confirmation instead of a wick tap is the right play, no cap. The bot says it's 3-of-3 bearish, but with no chart I can't see the push pattern, whether the zone's still fresh, or the trend, so I'm not stamping it blind.
+
+Small thing: the post says it goes to the trades chat once it triggers, but if it triggers and the entry isn't hit yet, that's PENDING and stays in setups. Drop the chart and I'll lock it in.
+Verdict: UNSURE (need the chart)"
+2026-10-20T09:08:11-04:00,setup,setups,EUR_USD,f2335e3a,INVALID,"Sup gang. EU long off the 4H demand at 1.12068-1.12182, posted 9:07 AM Tuesday, so the window's good. Problem is this box isn't untouched, bro. The chart's on UTC (the box starts at 17:00, which is the 1 PM ET formation), and from about 5 to 8 AM ET today three 1H candles closed inside it, one wicking to about 1.12045, before that 8 AM candle ripped out to 1.12257.
+
+The 1m confirmation trigger is only for an untouched zone from an earlier day. This one got tagged before the session, and the 15m at 1.12063-1.12110 and the 1m at 1.12091 are already printed, so the bot's waiting on a trigger this zone doesn't qualify for. It's also lowkey sketchy that price chopped inside the box most of Monday evening right after the 1 PM print, and I can't see the Daily or 4H from here to back up the 3-of-3 trend.
+
+Verdict: INVALID (zone already tapped pre-session)"
+2026-10-20T09:08:13-04:00,setup,setups,EUR_USD,f2335e3a,VALID,"Yo fellas. EU long off the 4H demand at 1.12068-1.12182, and price already dipped in this morning: the 5 AM ET candle wicked to about 1.12045, the 6 and 7 AM candles closed inside around 1.1207-1.1211, then the 8 AM candle ripped back out to about 1.1226 (chart reads in UTC, since the box starting at 17:00 lines up with the 1 PM ET formation).
+
+Posted 9:07 AM Tuesday, so we're in the window, and it's a Monday zone with plenty of 4H closes before price came back, so waiting on the 1m confirmation is the right play. That 2-pip wick under the floor came from above, not a far-side retest, and no body closed under 1.12068, so it's still fresh by the book.
+
+Lowkey odd that a 1m demand at 1.12091 is already drawn while the post says it's still waiting, and the 15m box hangs down to 1.12063 under the 4H floor, so peep that if it goes pending. Can't see the Daily or 4H from this chart, so I'm trusting the bot on the 3-of-3 trend.
+Verdict: VALID (watch that 1m and 15m placement)"
+2026-10-20T09:08:15-04:00,setup,setups,EUR_USD,f2335e3a,INVALID,"Sup gang. EU long off the 4H demand at 1.12068-1.12182, posted Tuesday 9:07 AM ET, so we're inside the window. I'm reading the chart times as UTC, since the box starts at 17:00 and that matches the 1 PM ET formation in the post.
+
+Bro, this zone already got hit. The 5 AM ET candle wicked down to around 1.1205 and the 7 AM candle poked 1.1206, both under the 1.12068 floor, then the 8 AM candle ripped up to 1.1226. The 1m confirmation play is only for an untouched zone from an earlier day, and this one got tagged and bounced before the session even opened, so waiting on a 1m trigger here is the wrong call, no cap.
+
+Also lowkey sketchy that price chopped inside the box for about 8 hours after it formed before finally closing above 1.12182. Can't see the Daily or 4H from here to back up that 3-of-3 trend either.
+Verdict: INVALID (zone already tapped pre-session)"
+2026-10-20T09:08:23-04:00,setup,setups,EUR_USD,f2335e3a,UNSURE,"Sup gang. Fiber long off the 4H demand at 1.12068-1.12182. The chart's on UTC, so the box starting at 17:00 lines up with the bot's 1 PM ET formation, and the 4H that closed at 1.12333 (1 AM ET) pushed clean out of it. Tuesday 9:07 AM is inside the window, and since it's a zone from an earlier day, waiting on the 1m confirmation is the right kind of trigger.
+
+Here's what's lowkey bugging me, bro. Price already came back into the box before the session, wicking to about 1.12045 at 5 AM ET, a couple pips under the bottom, though bodies held around 1.12072 so nothing closed through. Then the 8 AM ET candle ripped out to 1.12257, which already looks like body-in, break-out, and the bot's own 15m, 5m and 1m zones are sitting in there. The docs don't say whether a pre-session tap burns an untouched zone or counts toward the 1m sequence, the origin candle prints near doji on the 1H so I can't confirm it's bearish, and I can't see the Daily or 4H trend from here.
+Verdict: UNSURE (pre-session tap at 5 AM ET)"
+2026-10-20T09:08:33-04:00,setup,setups,EUR_JPY,ea294f20,INVALID,"Yo fellas. EJ long off the 1H demand at 177.203-177.406. The chart's in UTC, so that 10:00 red origin candle is the 6 AM ET one, and the 8 AM ET green confirmed it by closing up at 177.41. Posted 9:08 AM Tuesday and the zone formed this morning, so waiting on a 15m/5m wick tap is the right trigger.
+
+Here's the problem, bro: the bot says 1H is bullish, but this chart has made lower highs from 177.9 all morning. That 8 AM green only reached 177.455, still under the 5 AM candle's high near 177.48. Can't see the Daily or 4H from here, but with the 1H bearish and the 4H not claimed bullish, there's no 2-of-3 for a long. Also lowkey, the 8 AM wick poked to 177.18 under the zone floor, and any tap before the 9 AM ET candle closes at 10 wouldn't count anyway.
+Verdict: INVALID (1H trend doesn't back the long)"
+2026-10-20T09:08:35-04:00,setup,setups,EUR_JPY,ea294f20,UNSURE,"Yo fellas, EJ long off the 1H demand at 177.203-177.406. The origin is that red 6 AM ET candle (the chart's on UTC, so it's the 10:00 bar), and the 8 AM ET candle closed up around 177.41 to confirm it. Tuesday 9:08 AM is inside the window, and since the zone formed today, waiting on a 15m/5m wick tap is the right play.
+
+Here's what's lowkey sketchy: this 1H chart is straight bleeding, lower highs from 177.9 down to that 177.14 wick at 5 AM ET. Calling 1H bullish only works if the bot's counting the last two green bars, which is our unsettled trend-lock question, and I can't see the Daily to back up the other vote. That 8 AM ET confirming candle also wicked to 177.18, under the 177.203 floor, so I can't confirm the box is drawn right.
+
+Heads up too: the zone isn't ready until the 9 AM ET candle closes at 10, so any tap before 10 AM ET shouldn't count, even though the post says 9 AM.
+Verdict: UNSURE (1H trend read and zone bottom)"
+2026-10-20T09:08:36-04:00,setup,setups,EUR_JPY,ea294f20,UNSURE,"Sup gang. EJ 1H demand at 177.203-177.406 starts at the red origin candle at 10:00 on the chart (that's UTC, so 6 AM ET), and the 8 AM ET green candle closing around 177.41 is what pushes it, even though that same candle wicked down to about 177.18 first.
+
+Tuesday 9:08 AM is inside the window, and since the zone formed this morning, waiting for a 15m/5m wick tap is the right trigger. But that 8 AM candle only closed at 9, so the zone isn't ready until the 9 AM candle closes at 10 AM, and a tap before then shouldn't count. Bigger thing: on this 1H I only see lower highs from 177.9 down to 177.26, so I don't see where the bot gets a bullish 1H. I can't see the Daily from here either, and it might come down to whether the trend locks at 9 AM or updates.
+
+Heads up if it does trigger: the 8-pip SL at 177.298 sits above the 5m demand at 177.288, so it should be 10 pips at 177.278 with TP at 177.578, and it should stay in setups as PENDING until the entry actually hits.
+Verdict: UNSURE (1H trend + zone not ready till 10 AM)"
+2026-10-20T09:08:40-04:00,setup,setups,EUR_JPY,ea294f20,UNSURE,"Yo fellas. EJ long off the 1H demand at 177.203-177.406. The chart's in UTC, so the box starts at the 10:00 candle (6 AM ET), and the 12:00 candle (8 AM ET) wicked down to 177.180 before closing back up around 177.41.
+
+Tuesday 9:08 AM ET is inside the window, and since the zone formed this morning, waiting on a 15m/5m wick tap is the right play. Just know that confirming candle only closed at 9 AM, so the zone isn't ready until the next 1H closes at 10 AM ET, and any tap before then doesn't count.
+
+What's lowkey bugging me is the trend tag. The bot calls the 1H bullish, but this chart is stacked lower highs from 177.92 down to 177.26, and the 12:00 high at 177.455 didn't even clear the 9:00 high at 177.48. If the 1H is really bearish, that's 4H plus 1H bearish and this long is dead, and I can't see the Daily or 4H from here to settle it. Also heads up: that 8-pip stop at 177.298 sits right above the 5m zone at 177.288, so it should probably be 10 pips at 177.278.
+Verdict: UNSURE (double check that 1H trend call)"
+2026-10-20T09:09:09-04:00,setup,setups,GBP_USD,67aa17a5,UNSURE,"Yo fellas. GU long off the 4H demand at 1.32988-1.33324. The box matches that red 4H candle from Monday 9 AM ET, which shows as 13:00 on this chart, so the axis looks like UTC. The push off it was slow though: two 4H candles chopped inside the box, and the third only closed around 1.3333 at 1 AM ET today, barely a pip over the top.
+
+Tuesday 9:08 AM is inside the window, and nothing has body-closed under 1.32988. Since it's a Monday zone, waiting on the 1m confirmation is the right kind of trigger. The 1H is ripping up near 1.3378, but I can't see the Daily or 4H from here, so the 3-of-3 trend is on the bot's word.
+
+What's got me on the fence is the 1 AM and 2 AM ET candles dipping back to about 1.3329, inside the box, before the next 4H closed at 5 AM ET. The docs don't say whether a touch before the zone is ready means it's no longer untouched, so that's your call, boys.
+Verdict: UNSURE (does that pre-ready dip count as a touch)"
+2026-10-20T09:09:22-04:00,setup,setups,GBP_JPY,db721c8b,UNSURE,"Yo fellas. GJ long off the 4H demand at 210.882-211.186, and the last 1H candle just ripped out the top of the box, closing around 211.29 with a wick up near 211.35. The bot's waiting on the 1m confirmation, which is the right trigger since this zone's from Monday night. It's posted 9:09 AM Tuesday, so we're inside the window.
+
+Here's what's lowkey sketchy. Right after the box starts, two 1H bodies close down around 210.84 and 210.835, under the 210.882 floor, with wicks tagging about 210.79. Then price chops inside the box all night, with wicks to 210.87 and 210.89. If those closes came after the zone printed, it's not fresh and not untouched. If they're part of the 4H origin candle, the 210.882 low doesn't match a candle that wicked to 210.79.
+
+The chart times don't clearly line up with the posted 9 PM ET formation, so I can't call which it is. Can't see the Daily or 4H from here either, so the 3-of-3 trend is on the bot.
+
+Verdict: UNSURE (check those sub-210.882 closes)"
+2026-10-20T09:09:27-04:00,setup,setups,GBP_JPY,db721c8b,UNSURE,"Yo fellas. GJ long off the 4H demand at 210.882-211.186. The chart times look like UTC, since the box starts at 01:00, which matches the 9 PM ET origin, and that red 4H candle checks out as the origin. The 4H that closed at 9 AM ET is the one that pushed beyond it, closing up around 211.29.
+
+Posted 9:09 AM Tuesday, so the session's good, and since the zone's from Monday night, waiting on the 1m confirmation is the right play. But the 4H only confirmed 9 minutes before this post, and the next 4H doesn't close until 1 PM ET. Anything that fires this session is firing before the zone's ready, no cap.
+
+What's lowkey bugging me is the 1 AM ET hourly candle, which closed its body around 210.84, under the box. It wicked down to about 210.785 before price ripped back up, and the docs don't say whether a sweep like that, before confirmation, kills freshness. Also, I can't see the Daily or 4H trend from this 1H chart, so the 3-of-3 is on the bot.
+Verdict: UNSURE (does the pre-confirm sweep under 210.882 kill it, and nothing's live till 1 PM)"
+2026-10-20T09:09:27-04:00,setup,setups,GBP_USD,67aa17a5,VALID,"Yo fellas. Cable long off the 4H demand at 1.32988-1.33324. The origin is the red 4H from 9 AM to 1 PM ET Monday, and the 1 AM to 5 AM ET 4H broke out, closing around 1.3349. Since then it's run to about 1.3369 on the 8 AM candle with nothing wicking back into the box, so the zone's fresh and ready, no cap.
+
+Posted 9:08 AM Tuesday, so we're inside the window. The zone's from yesterday, so waiting on the 1m confirmation is the right play. 1H is clearly stepping higher, but I can't see the Daily or 4H from here, so I'm trusting the bot's 3-of-3.
+
+Only thing lowkey bugging me: the 9 PM to 1 AM 4H closed around 1.3330, which clears the origin body but sits right at the 1.33324 top, so that push is a bit borderline. Also, that 1m line at 1.33038 was drawn Monday night, not off a fresh confirmation, so it shouldn't end up as the entry.
+Verdict: VALID (eyes on that third push candle)"
+2026-10-20T09:09:36-04:00,setup,setups,GBP_JPY,db721c8b,INVALID,"Aight boys, GJ long off the 4H demand at 210.882-211.186. The 05:00 candle on this chart (1 AM ET) closed around 210.84, below the 210.882 floor, after wicking down to about 210.79. The 06:00 candle ripped back in, and the 12:00 candle (8 AM ET) is what finally closed up at 211.295.
+
+That 05:00 close is a body close straight through the bottom of the demand, so the zone isn't fresh, no cap. On top of that, price only pushed back over 211.186 on the 4H candle that closed at 9 AM today. The next 4H close isn't until 1 PM ET, which is after the session ends, so this zone can't be ready in time either way.
+
+Timing at 9:09 AM Tuesday is fine. I can't see the Daily or 4H from a 1H chart, so I'm not checking the 3-of-3 trend claim. Doesn't matter, though, the zone's already broken.
+Verdict: INVALID (body closed through the zone at 1 AM ET)"
+2026-10-20T09:10:32-04:00,setup,setups,GBP_USD,67aa17a5,INVALID,"Sup gang. GU long off the 4H demand at 1.32988-1.33324. The origin is that red 4H block starting at the 13:00 candle on the chart (9 AM ET Monday), and price hasn't wicked back into it since it ripped out at 05:00, now sitting up at 1.3369. Tuesday 9:08 AM is inside the window, and the zone's a day old, so waiting on the 1m confirmation instead of a wick tap is the right call.
+
+Problem is the push, bro. After the origin, the 17:00, 21:00 and 01:00 4H candles all closed inside the box, with the 01:00 one finishing around 1.3330, a couple pips under the 1.33324 top. That makes the 05:00 candle the first close beyond it, which is candle number 4 and breaks the 1-to-3 rule. Can't see the Daily or 4H from this 1H chart, but the 1H is clearly pushing up, so the trend isn't the issue here.
+Verdict: INVALID (push took 4 candles)"
+2026-10-20T10:07:42-04:00,pending,setups,USD_JPY,8051869d,UNSURE,"Yo fellas. UJ short off the 1H supply at 158.089-158.197. The axis looks like UTC, since the box starts at the 10:00 candle and that's the 6 AM ET origin the bot listed. That green origin got sold, and the 8 AM ET red candle closed around 158.04, under the zone. Tuesday at 10:07 is inside the window, a today zone means waiting on a wick tap is the right play, and the 5m entry at 158.130 with an 8-pip SL at 158.210 and 16-pip TP at 157.970 all checks out.
+
+What's lowkey bugging me: the zone wasn't ready until the 9 AM ET candle closed at 10, but that same candle wicked up to about 158.11, already inside the box. So price came back before the zone was ready, and the docs don't say whether a fresh tap at 10:00 still counts after that. I also can't see the Daily or 4H from here, and the 7 AM ET wick poking up to about 158.23 above the zone top is worth a look.
+
+Verdict: UNSURE (does a tap before the zone is ready kill the 10:00 trigger?)"
+2026-10-20T10:07:43-04:00,pending,setups,USD_JPY,8051869d,UNSURE,"Yo fellas, UJ short off the 1H supply at 158.089-158.197, entry on the 5m at 158.130. Bro, this chart's clock is off: the post went out at 10:07 AM, but the chart already shows the 11:00, 12:00 and 13:00 candles, so I can't tell which candle the bot means by ""formed 6 AM.""
+
+If those times are ET, I'm not feeling this zone. The 06:00 candle is red, not a green origin, and only the 07:00 candle closes below 158.089, by like a hair. Then the 08:00 to 10:00 candles chop right back inside the box, and the 08:00 wick pokes up to about 158.228, over the top. That's not a clean push away and not a fresh first tap at 10:00.
+
+The rest checks out. Tuesday at 10:07 is in the window, it's in the setups chat as PENDING, and 158.130 is the right first zone for a short. The 8-pip stop at 158.210 clears the 1m at 158.157, and the TP at 157.970 is a clean 2R. Can't see the Daily from a 1H chart, so I'm trusting the 4H+1H read.
+Verdict: UNSURE (need the chart's timezone; if it's ET, this one's INVALID)"
+2026-10-20T10:07:44-04:00,pending,setups,USD_JPY,8051869d,UNSURE,"Yo fellas. UJ short off the 1H supply at 158.089-158.197. The chart axis looks like it's 4 hours ahead of ET, so the green origin candle at the 10:00 mark is the 6 AM ET candle the bot named, and the 8 AM ET candle closed below the box at 158.043.
+
+Tuesday 10:07 AM, PENDING in setups, and a wick tap is the right trigger for a zone formed this morning. Entry at the 5m at 158.130 is the lowest small zone, the 8-pip stop at 158.210 clears the 1m at 158.157, and TP at 157.970 is a clean 2R.
+
+What's lowkey sketchy is the 9 AM ET candle already wicked up to about 158.110 into the box before it closed, so if that's the tap the bot stamped as 10:00, it hit before the zone was ready. I can't see the 15m/5m after 10 AM to confirm a fresh tap, or the Daily/4H for the trend.
+Verdict: UNSURE (was the 10:00 trigger a fresh tap after the 9 AM candle closed?)"
+2026-10-20T10:07:45-04:00,pending,setups,USD_JPY,8051869d,INVALID,"Yo fellas. UJ short off the 1H supply at 158.089-158.197. The chart axis has to be UTC, 4 hours ahead of ET, or it'd be showing candles from after the 10:07 post. So the origin is that green 10:00 bar (6 AM ET), and the red 12:00 bar (8 AM ET) closed down near 158.04 to confirm the push. Tuesday 10:07 AM is in the window, the zone formed today so a wick tap is the right trigger, and the 5m entry at 158.130 with SL 158.210 / TP 157.970 is clean 2R math.
+
+Here's the problem, bro. The 13:00 bar (9 AM ET) is the candle that had to close before the zone was ready, and its wick poked back up to about 158.11, right inside the box. Price came back into the zone before it was ready, so that ""10 AM wick tap"" isn't the first touch, and that fails the zone-ready rule. Can't see the Daily or 4H from here, so I'm trusting the bot on the trend.
+
+Verdict: INVALID (zone got tapped before it was ready)"
+2026-10-20T10:13:40-04:00,active,trades,USD_JPY,3cb0066d,INVALID,"Yo fellas. UJ short off the 1H supply at 158.089-158.197: green origin candle at 10:00 on the chart, then the 12:00 red closed under the box at about 158.043. Chart axis looks like UTC, so that's 6 AM ET formation, 10:13 AM Tuesday post, and the 10:00 AM ET wick tap is right on time. The 13:00 candle wicks up to about 158.11 before the zone was ready, which is lowkey sketchy, but it never closed back inside.
+
+The problem is the entry. The bot says 158.072 ""1m zone,"" but that's under the 1H box's 158.089 floor, and the only 1m supply drawn is at 158.157. For a short, the first smaller zone inside the box is the 5m at 158.130, so it should be 158.130 entry, 158.210 stop (clears the 1m at 158.157), 157.970 target. Can't see the 4H from here, so I'm taking the bot's word on the trend.
+Verdict: INVALID (entry sits outside the zone)"
+2026-10-20T10:13:41-04:00,active,trades,USD_JPY,3cb0066d,INVALID,"Yo fellas. UJ short off the 1H supply at 158.089-158.197, built off that green 10:00 candle (UTC on the chart, so 6 AM ET). The 12:00 red closed down at about 158.04, so the push is legit, and posting Tuesday 10:13 AM ET with the tap at 10:00 ET means we're in the window and wick tap is the right trigger.
+
+Here's the problem, bro. Entry at 158.072 is sitting under the bottom of the box at 158.089, and it isn't even the 1m zone, since the chart has that 1m line way up at 158.157. The first smaller zone price hits inside a supply box is the 5m at 158.130, so that's where the entry should be.
+
+On top of that, the 8-pip stop at 158.152 doesn't clear the 1m at 158.157, and the 5m sits right between entry and stop. Lowkey looks like it grabbed the 8/16 confirmation-trade sizing on a wick tap. Can't see the Daily/4H or the 14:00 UTC tap candle from this chart, but the entry and stop already break the rules, no cap.
+Verdict: INVALID (entry outside the zone, stop doesn't clear the 1m)"
+2026-10-20T10:13:42-04:00,active,trades,USD_JPY,3cb0066d,INVALID,"Yo fellas. UJ short off the 1H supply at 158.089-158.197. The 10:00 green origin got smacked by that 12:00 red closing around 158.043, so the push pattern checks out. Tuesday 10:13 AM ET is inside the window, the zone formed today so a wick tap is the right trigger, and the 13:00 candle closed before the 14:00 UTC trigger.
+
+Here's what's lowkey killing it, bro. The entry at 158.072 sits under the box, about 1.7 pips below the 158.089 floor, so it isn't inside the zone at all. The lowest smaller zone actually inside is that 5m at 158.130, and the 1m on the chart is drawn at 158.157, not 158.072. The play should've been short 158.130 with the 8-pip stop at 158.210, which clears the 1m at 158.157, and the target at 157.970.
+
+The chart also stops at the 13:00 candle, so I can't see the 14:02 fill to confirm it's actually ACTIVE. I can't check the Daily or 4H from a 1H chart either, so I'm trusting the bot on the 4H+1H bearish call.
+Verdict: INVALID (entry's outside the zone)"
+2026-10-20T10:13:46-04:00,active,trades,USD_JPY,3cb0066d,INVALID,"Yo fellas. UJ short off the 1H supply at 158.089-158.197: green 10:00 origin, then the 12:00 red closes down near 158.04, so the push is legit and Tuesday 10:13 AM ET is inside the window. Reading the chart times as UTC, the 14:00 trigger lands right as the next 1H candle closes, but that 13:00 candle already wicked into the box around 158.11, and the docs don't say if that early poke burns the zone.
+
+The real problem is the entry. 158.072 sits under the zone bottom at 158.089, and there's no 1m zone drawn there; the only 1m on the chart is at 158.157. On a wick tap, the entry should be the lowest smaller zone inside the box, which is the 5m at 158.130. That gives an 8-pip SL at 158.210 (clears the 1m) and TP at 157.970, so it looks like the bot ran confirmation-trade math on a wick_tap. Can't see the Daily or 4H from a 1H chart either, so I'm trusting the bot on the trend.
+
+Verdict: INVALID (entry's outside the zone)"
+2026-10-20T10:48:57-04:00,active,trades,GBP_CAD,2b10a03d,UNSURE,"Yo fellas. GJ-cousin GBP_CAD short off the 1H supply at 1.88182-1.88312, and that green origin candle early Oct 19 got dumped hard to about 1.8788, so the push pattern is legit. Price hasn't been back since, so the zone's fresh. It's from yesterday, so running the 1m confirmation is the right play, and the trigger at 10:08 AM ET is 40 minutes before the 10:48 Tuesday post, so we're good on timing.
+
+Here's what's lowkey sketchy. The last bar drawn is the 13:00 candle topping around 1.8813, under the box, so I can't actually see the tag or the 1m sequence. On top of that, the SHORT at 1.88162 sits 2 pips below the 1H zone, but the chart's 1m supply is labeled 1.88213, and the docs don't say whether a 1m zone hanging under the big box counts. Can't see the Daily or 4H from a 1H chart either, so the bearish 2-of-3 is on trust.
+
+Somebody check that 1m zone before we ride this.
+Verdict: UNSURE (entry 1.88162 vs 1m at 1.88213)"
+2026-10-20T10:48:58-04:00,active,trades,GBP_CAD,2b10a03d,VALID,"Yo fellas. GBP_CAD short off the 1H supply at 1.88182-1.88312, which came from that green candle on Oct 19 that got smacked by the big red candle right after. Price dumped to around 1.8735 and is now ripping back up. Nothing has wicked into the box since then, so the zone's still fresh, no cap.
+
+Posted Tuesday at 10:48 AM ET, so we're in the window. The zone is from yesterday, so running the 1m confirmation with an 8-pip stop and 16-pip target is the right play. The 14:08 UTC trigger is 10:08 AM ET, only 40 minutes before the post, so we're good on timing. SL 1.88242 and TP 1.88002 check out.
+
+Only thing lowkey bugging me: the chart labels the 1m supply at 1.88213 inside the box, but the short is at 1.88162, about 2 pips under the zone. The last candle on the chart tops out around 1.8813, so I can't see the 1m sequence or the actual tag from here. Can't check the Daily/4H from a 1H chart either, so I'm trusting the bot on the trend.
+Verdict: VALID (double-check that 1m entry level)"
+2026-10-20T10:48:58-04:00,active,trades,GBP_CAD,2b10a03d,UNSURE,"Sup gang. GBP/CAD short off the 1H supply at 1.88182-1.88312, built off that green candle on Oct 19 that got smacked by the big red bar down to about 1.8788. Price hasn't been back near it since, so the zone's fresh, and since it's from an earlier day, the 1m confirmation sequence is the right play.
+
+Tuesday 10:48 AM ET is inside the window, the 10:08 AM trigger is only 40 minutes old, and the 8-pip stop with the 16-pip target checks out. The last 1H candle on the chart tops out around 1.8813, so I can't see the 1m sequence or the entry fill. I also can't check the Daily or 4H from here.
+
+What's lowkey bugging me is the entry at 1.88162, which sits 2 pips under the box, while the only 1m supply drawn is 1.88213 inside it. One of y'all needs to confirm which 1m zone the bot actually used before we call this clean.
+
+Verdict: UNSURE (entry doesn't match the drawn 1m zone)"
+2026-10-20T10:49:02-04:00,active,trades,GBP_CAD,2b10a03d,INVALID,"Yo fellas. GJ... nah, GBP_CAD short off the 1H supply at 1.88182-1.88312, built from that green candle at Oct 19 04:00 UTC and the big red one that dumped right after it. Price never wicked back into it until today's push, and the 13:00 UTC candle topped out around 1.8813, so the zone's still fresh. It's from yesterday, so the 1m confirmation is the right trigger, and 10:48 AM Tuesday is inside the window.
+
+Here's what's bugging me though. The bot's own chart draws the newest 1m supply at 1.88213, but the entry's at 1.88162. That's about 5 pips lower and sitting under the 1H box. If the real entry is 1.88213, the stop and target are both off, and we can't say for sure it's been filled, so it shouldn't be in the trades chat as ACTIVE. The 14:08 UTC trigger candle isn't on the chart either, and I'm taking the Daily/4H trend on the bot's word.
+
+Verdict: INVALID (flips if the 1m box really bottoms at 1.88162)"
+2026-10-20T12:04:37-04:00,setup,setups,USD_JPY,f05e0595,INVALID,"Yo fellas, UJ long off the 1H demand at 157.829-158.104. That little red 10 AM ET candle (14:00 on the chart) got sent by the 11 AM green that closed around 158.205, and price hasn't been back since, so the zone's fresh. Posted 12:04 PM Tuesday, inside the window, and since the zone formed today, waiting on a 15m/5m wick tap is the right trigger.
+
+The timing kills it though, bro. The confirming 11 AM candle closed at noon, so the zone isn't ready until the next 1H candle closes at 1 PM. The session ends at 12:59, so any tap inside the window comes before the zone is ready, and any tap after 1 PM is out of session. There's no way this one triggers legally.
+
+On top of that, the planned entry at 158.112 sits above the box. For demand it should be inside, around the 5m at 158.023. The 8/16 stop and target are confirmation-trade sizing, not the wick-tap stop rule. The 1H also looked heavy before that green candle, and I can't see the Daily from here.
+Verdict: INVALID (zone not ready before 12:59 cutoff)"
+2026-10-20T12:04:37-04:00,setup,setups,USD_JPY,f05e0595,INVALID,"Yo fellas. UJ 1H demand at 157.829-158.104. The chart's in UTC, so the box starts on that small red 14:00 candle (10 AM ET), and the big green 15:00 candle (11 AM ET) ripped up to about 158.205, closing well above the top. Push pattern checks out, price hasn't been back so it's fresh, and Tuesday 12:04 PM is inside the window.
+
+The problem is zone ready, bro. That green confirming candle only closed at 12 PM ET, so the zone isn't live until the next 1H candle closes at 1 PM ET, and that's past the 12:59 cutoff. Any 15m/5m tap is either too early or out of session, so this can't legally trigger today.
+
+Also peep the entry: 158.112 sits above the box top at 158.104 and doesn't match any drawn zone, so I'd want the 5m at 158.023. Can't see the Daily from a 1H chart, and the 1H was bleeding lower all morning until that one candle, so the trend call is lowkey sketchy too.
+
+Verdict: INVALID (zone isn't ready until after the window)"
+2026-10-20T12:04:43-04:00,setup,setups,USD_JPY,f05e0595,INVALID,"Yo fellas. UJ 1H demand at 157.829-158.104: the red 10 AM candle at 157.987-158.000 got followed by that 11 AM green, which ripped and closed at 158.205, way above the box. Clean push, and price hasn't been back, so the zone's fresh. (I'm reading the chart axis as UTC, which lines up with the bot's 10 AM formation time.)
+
+Problem is timing, bro. That 11 AM confirming candle only closed at noon, so the zone isn't ready until the next 1H closes at 1 PM. That's past the 12:59 cutoff, so there's no legal tap left in today's window.
+
+The trade plan's off too. Entry at 158.112 sits above the box top, and the 8/16 pip numbers are the confirmation-trade format, not the wick-tap one. The highest smaller zone inside is the 5m at 158.023. Can't see the Daily from here, and the 7 to 10 AM 1H candles were all red, so I'm lowkey not sold on that 1H bullish read either.
+
+Verdict: INVALID (zone can't be ready before the 12:59 cutoff)"
+2026-10-20T12:04:46-04:00,setup,setups,USD_JPY,f05e0595,INVALID,"Yo fellas. UJ 1H demand at 157.829-158.104. The origin is that little red candle at 10 AM ET (14:00 on the chart, which looks like UTC time), and the 11 AM green ripped it to close at 158.205, so the push is real and the zone's still untouched.
+
+Problem is the timing, bro. That confirming candle only closed at 12:00 PM ET, so the zone isn't ready until the noon candle closes at 1:00 PM, and the window shuts at 12:59. Any wick tap today comes too early to count. Calling the 1H bullish is also lowkey sketchy when it stepped down from 158.16 to 157.99 all morning, and I can't see the Daily or 4H from here.
+
+Heads up on the plan too. The 158.112 entry sits above the box, the chart's 1m zone is at 157.920, and the highest zone inside is the 5m at 158.023. The 8/16 sizing is the confirmation play, not a same-day tap.
+Verdict: INVALID (zone not ready before the window closes)"
