@@ -94,8 +94,28 @@ def summarize(result: dict) -> str:
     return " | ".join(parts)
 
 
+MAX_LINE = 300
+
+
+def short(msg) -> str:
+    """One readable line. Oct 28: an OANDA outage returned a 190 KB Cloudflare
+    HTML error page, the watcher saved it whole as the 'scan failed' reason, and
+    Chad's question prompt grew to 1.7M tokens. Never store more than a line."""
+    s = str(msg)
+    if "<html" in s.lower() or "<!doctype" in s.lower():
+        import re
+        code = re.search(r"Error reference number:\s*(\d{3})", s)
+        title = re.search(r"<title>([^<]{1,80})</title>", s)
+        what = (f"HTTP {code.group(1)}" if code else title.group(1).strip() if title else "unknown")
+        head = s.split("<", 1)[0].strip()
+        s = f"{head} price server returned an error page ({what})".strip()
+    s = " ".join(s.split())
+    return s if len(s) <= MAX_LINE else s[:MAX_LINE] + "..."
+
+
 def note_pair(pair: str, outcome: str):
     """Latest outcome per pair; history keeps each change of outcome."""
+    outcome = short(outcome)
     with _lock:
         path = DIR / f"pairs_{_today()}.json"
         data = _read(path, {})
@@ -109,7 +129,13 @@ def note_pair(pair: str, outcome: str):
 
 
 def pairs_today(day: str = None) -> dict:
-    return _read(DIR / f"pairs_{day or _today()}.json", {})
+    """Cleaned on read too, so a file written before the fix can't blow up a prompt."""
+    data = _read(DIR / f"pairs_{day or _today()}.json", {})
+    for p in data.values():
+        if isinstance(p, dict):
+            p["outcome"] = short(p.get("outcome", ""))
+            p["history"] = [h[:9] + short(h[9:]) for h in p.get("history", [])]
+    return data
 
 
 # ------------------------------------------------------------------ errors
@@ -119,7 +145,7 @@ def error(source: str, msg: str):
         DIR.mkdir(exist_ok=True)
         with (DIR / f"errors_{_today()}.jsonl").open("a", encoding="utf-8") as fh:
             fh.write(json.dumps({"ts": _now().isoformat(timespec="seconds"),
-                                 "source": source, "msg": str(msg)[:500]}) + "\n")
+                                 "source": source, "msg": short(msg)}) + "\n")
 
 
 def errors_today(day: str = None) -> list:

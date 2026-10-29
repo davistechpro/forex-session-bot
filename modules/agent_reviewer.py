@@ -393,13 +393,23 @@ def rules_block() -> str:
     return "\n\n" + body if body else ""
 
 
+MAX_CONTEXT_CHARS = 60000   # ~15k tokens; a normal day is well under 10k chars
+
+
+def _cap(text: str) -> str:
+    """Safety net: never send Chad more than ~15k tokens of day data."""
+    if len(text) <= MAX_CONTEXT_CHARS:
+        return text
+    return text[:MAX_CONTEXT_CHARS] + "\n(... day data cut off here because it was too long)"
+
+
 def ask(question: str, asker: str = "") -> str:
     """Answer a teammate's question in the chat, from today's data and the rules."""
     system = INSTRUCTIONS_FILE.read_text(encoding="utf-8")
     if QA_FILE.exists():
         system += "\n\n" + QA_FILE.read_text(encoding="utf-8")
     system += rules_block() + feedback_block()
-    body = f"TODAY'S DATA:\n{_today_context()}\n\nQUESTION from {asker or 'a teammate'}:\n{question}"
+    body = f"TODAY'S DATA:\n{_cap(_today_context())}\n\nQUESTION from {asker or 'a teammate'}:\n{question}"
     msg = _get_client().messages.create(
         model=os.getenv("AGENT_REVIEW_MODEL", "claude-opus-5-5"),
         max_tokens=int(os.getenv("AGENT_REVIEW_MAX_TOKENS", "8000")),
@@ -478,6 +488,6 @@ def compose(kind: str, data: str) -> str:
         model=os.getenv("AGENT_REVIEW_MODEL", "claude-opus-5-5"),
         max_tokens=int(os.getenv("AGENT_REVIEW_MAX_TOKENS", "8000")),
         system=system,
-        messages=[{"role": "user", "content": f"WRITE THE {kind.upper()}.\n\nDATA:\n{data}"}],
+        messages=[{"role": "user", "content": f"WRITE THE {kind.upper()}.\n\nDATA:\n{_cap(data)}"}],
     )
     return "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
