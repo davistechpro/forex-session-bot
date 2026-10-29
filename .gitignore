@@ -28,3 +28,5 @@ agent_reviews.csv
 .env.backup_*
 status/
 chad_feedback.csv
+chat_log.csv
+chat_media/

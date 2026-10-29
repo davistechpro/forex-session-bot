@@ -126,6 +126,7 @@ def handle_callback(cb: dict):
     uid, voter = user.get("id"), _voter_name(user)
     msg = cb.get("message") or {}
     chat_id = (msg.get("chat") or {}).get("id")
+    notifier.log_chat(chat_id, voter, f"[tapped {verdict.upper()}]", msg.get("caption") or msg.get("text") or "")
 
     sig = notifier.lookup_signal(token)
     if not sig:
@@ -224,7 +225,46 @@ def _ask_chad(msg: dict, text: str):
     agent_reviewer.answer_async(chat_id, msg.get("message_id"), text, asker)
 
 
+MEDIA_DIR = Path("chat_media")
+
+
+def _save_photo(msg: dict):
+    """Download a photo the team posted (largest size) into chat_media/.
+    Returns the saved path, or None."""
+    try:
+        import os
+        import requests
+        best = max(msg["photo"], key=lambda ph: ph.get("file_size", 0) or ph.get("width", 0))
+        info = notifier._call("getFile", {"file_id": best["file_id"]})
+        if not info or not info.get("file_path"):
+            return None
+        url = f"https://api.telegram.org/file/bot{os.getenv('TELEGRAM_BOT_TOKEN')}/{info['file_path']}"
+        data = requests.get(url, timeout=30).content
+        MEDIA_DIR.mkdir(exist_ok=True)
+        out = MEDIA_DIR / f"{datetime.now(NY_TZ):%Y%m%d_%H%M%S}_{msg.get('message_id')}.jpg"
+        out.write_bytes(data)
+        return out
+    except Exception as e:
+        print(f"photo save failed: {e}")
+        return None
+
+
+def log_chat(msg: dict):
+    """Team messages -> chat_log.csv (the bot's own posts are logged by notifier).
+    Photos the team posts (chart screenshots) are saved to chat_media/."""
+    r = msg.get("reply_to_message") or {}
+    text = msg.get("text") or msg.get("caption") or ""
+    if msg.get("photo"):
+        saved = _save_photo(msg)
+        text = f"[photo: {saved}] {text}".strip() if saved else f"[photo, not saved] {text}".strip()
+    elif not text:
+        text = "[non-text message]"
+    notifier.log_chat((msg.get("chat") or {}).get("id"), _voter_name(msg.get("from") or {}),
+                      text, r.get("text") or r.get("caption") or "")
+
+
 def handle_message(msg: dict):
+    log_chat(msg)
     reason = (msg.get("text") or "").strip()
     if not reason or reason.startswith("/"):
         return

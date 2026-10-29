@@ -12,6 +12,7 @@ HTML parse mode (not Markdown): pair names contain underscores.
 import hashlib
 import html
 import json
+import re
 import os
 from pathlib import Path
 
@@ -40,6 +41,37 @@ def setups_configured() -> bool:
     return bool(os.getenv("TELEGRAM_BOT_TOKEN") and _chat_id("setups"))
 
 
+CHAT_LOG = Path("chat_log.csv")
+CHAT_FIELDS = ["at_et", "chat", "from", "text", "reply_to"]
+
+
+def chat_name(chat_id) -> str:
+    cid = str(chat_id)
+    if cid == str(_chat_id("setups")):
+        return "setups"
+    if cid == str(_chat_id("trades")):
+        return "trades"
+    return cid
+
+
+def log_chat(chat_id, who: str, text: str, reply_to: str = ""):
+    """Everything said in the groups (team, bot and Chad) goes to chat_log.csv."""
+    try:
+        import csv
+        from datetime import datetime
+        import pytz
+        new = not CHAT_LOG.exists()
+        with CHAT_LOG.open("a", newline="", encoding="utf-8") as fh:
+            w = csv.DictWriter(fh, fieldnames=CHAT_FIELDS)
+            if new:
+                w.writeheader()
+            w.writerow({"at_et": datetime.now(pytz.timezone("America/New_York")).strftime("%Y-%m-%d %H:%M:%S"),
+                        "chat": chat_name(chat_id), "from": who, "text": text,
+                        "reply_to": (reply_to or "")[:120].replace("\n", " ")})
+    except Exception as e:
+        print(f"chat log failed: {e}")
+
+
 def _call(method: str, payload: dict, files=None):
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
@@ -61,7 +93,15 @@ def _call(method: str, payload: dict, files=None):
             if "message is not modified" not in desc:
                 print(f"NOTIFIER: {method} failed: {desc}")
             return None
-        return body.get("result")
+        result = body.get("result")
+        if method in ("sendMessage", "sendPhoto") and isinstance(result, dict):
+            txt = payload.get("text") or payload.get("caption") or ""
+            who = "Chad" if txt.rstrip().endswith("-- Chad") else "OPT bot"
+            txt = re.sub(r"<[^>]+>", "", txt)
+            if method == "sendPhoto" and files and getattr(files.get("photo"), "name", None):
+                txt = f"[chart: {files['photo'].name}] {txt}"   # the chart image stays in rendered_charts/
+            log_chat(payload.get("chat_id"), who, txt)
+        return result
     except Exception as e:
         print(f"NOTIFIER: {method} error: {e}")
         return None
