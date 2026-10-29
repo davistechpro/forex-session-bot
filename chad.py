@@ -52,8 +52,16 @@ LISTENER_STALE_MIN = 5    # listener polls every ~10 s
 REALERT_MIN = 30
 # Gage, Oct 22: an update every hour from 9 AM, and a recap at 1 PM.
 # 9 AM waits a few minutes so the first scan has finished.
-UPDATE_SLOTS = [((9, 7), "9 AM update"), ((10, 0), "10 AM update"), ((11, 0), "11 AM update"),
-                ((12, 0), "12 PM update"), ((13, 0), "1 PM recap")]
+# Gage, Oct 28 call: no scheduled mid-market updates -- they blew up the chat.
+# The team asks for one by typing "mid market update" (or "Chad, update") in
+# the group and Chad answers there (see REQUESTS below). The 1 PM recap stays.
+UPDATE_SLOTS = [((13, 0), "1 PM recap")]
+# The old hourly schedule, kept here in case the team wants it back:
+# UPDATE_SLOTS = [((9, 7), "9 AM update"), ((10, 0), "10 AM update"), ((11, 0), "11 AM update"),
+#                 ((12, 0), "12 PM update"), ((13, 0), "1 PM recap")]
+
+# Requests from the chat (written by vote_listener.py, one JSON per line).
+REQUESTS = status.DIR / "chad_requests.jsonl"
 
 DRY = False
 
@@ -290,6 +298,42 @@ def job_summary(s):
     job_update(s, "recap")
 
 
+def job_requests(s):
+    """Answer 'mid market update' / 'Chad, recap' / 'Chad, oil report' requests
+    from the chat: post the update in the chat that asked, as a reply."""
+    if not REQUESTS.exists():
+        return
+    lines = REQUESTS.read_text(encoding="utf-8").splitlines()
+    REQUESTS.unlink()
+    for line in lines:
+        try:
+            req = json.loads(line)
+        except Exception:
+            continue
+        kind, who = req.get("kind", "update"), req.get("who", "the team")
+        print(f"CHAD: {who} asked for a {kind}")
+        try:
+            from modules import agent_reviewer, trade_tracker
+            if kind == "oil report":
+                data = f"TIME: {now():%A %b %d, %I:%M %p} ET\n" + trade_tracker.oil_week_data(PAIRS)
+                text = agent_reviewer.compose("weekly oil report", data)
+            else:
+                label = "recap" if kind == "recap" else f"mid-market update, asked for by {who}"
+                text = agent_reviewer.compose(label, _update_data(s, label))
+            if not text:
+                raise RuntimeError("empty reply")
+        except Exception as e:
+            status.error("chad", f"couldn't write the requested {kind}: {e}")
+            text = f"I couldn't put the {kind} together just now ({type(e).__name__}). Ask me again in a minute."
+        if DRY:
+            print("---- would reply ----\n" + text + "\n--------------------")
+            continue
+        notifier._call("sendMessage", {
+            "chat_id": req.get("chat_id"), "text": html.escape(text, quote=False) + SIGN,
+            "reply_to_message_id": req.get("reply_to"),
+        })
+
+
 def job_oil_report(s):
     """Gage, Oct 22: a high-level report of how oil is affecting the pairs we trade.
     Weekly (Monday 8:50 AM) or by hand: py chad.py --now oilreport"""
@@ -335,6 +379,12 @@ def main():
             heartbeat.ping("HEALTHCHECK_CHAD_URL", min_interval=60)
             t = now()
             hm = (t.hour, t.minute)
+            if REQUESTS.exists():                   # someone asked in the chat
+                s = load_state()
+                if "news" not in s:
+                    s["news"] = []
+                job_requests(s)
+                save_state(s)
             if is_trading_day(t):
                 s = load_state()
                 if hm >= (8, 45) and "morning" not in s["done"] and hm < (13, 0):
@@ -361,7 +411,7 @@ def main():
             print(f"chad error: {e}")
             status.error("chad", e)
         try:
-            time.sleep(60)
+            time.sleep(15)       # was 60: chat requests should be answered quickly
         except KeyboardInterrupt:
             print("\nStopped.")
             break

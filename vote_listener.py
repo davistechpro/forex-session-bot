@@ -239,8 +239,34 @@ def _confirm_rule(msg: dict, text: str) -> bool:
     return True
 
 
+REQUEST_RE = re.compile(
+    r"\bmid[\s-]?market\s+update\b|\bmarket\s+update\b|\bchad\b[\s,:!-]*(update|recap|oil\s+report)\b", re.I)
+REQUESTS_FILE = Path("status") / "chad_requests.jsonl"
+
+
+def _request_update(msg: dict, text: str) -> bool:
+    """Gage, Oct 28 call: no scheduled mid-market updates; the team asks for one.
+    'mid market update' (or 'Chad, update' / 'Chad, recap' / 'Chad, oil report')
+    -> a request chad.py picks up within ~15 s and answers in this chat."""
+    m = REQUEST_RE.search(text)
+    if not m:
+        return False
+    word = (m.group(1) or "update").lower()
+    kind = "oil report" if "oil" in word else ("recap" if word == "recap" else "update")
+    who = _voter_name(msg.get("from") or {})
+    REQUESTS_FILE.parent.mkdir(exist_ok=True)
+    with REQUESTS_FILE.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps({"kind": kind, "who": who, "chat_id": (msg.get("chat") or {}).get("id"),
+                             "reply_to": msg.get("message_id"),
+                             "at": datetime.now(NY_TZ).isoformat(timespec="seconds")}) + "\n")
+    print(f"[{datetime.now(NY_TZ):%H:%M:%S}] {who} asked for a {kind} (handed to chad.py)")
+    return True
+
+
 def _ask_chad(msg: dict, text: str):
     if _confirm_rule(msg, text):
+        return
+    if _request_update(msg, text):
         return
     asker = _voter_name(msg.get("from") or {})
     chat_id = (msg.get("chat") or {}).get("id")
@@ -293,8 +319,9 @@ def handle_message(msg: dict):
     reason = (msg.get("text") or "").strip()
     if not reason or reason.startswith("/"):
         return
-    # 0. "confirm" under a Chad "Proposed rule" message -> saved as a team rule
-    if _confirm_rule(msg, reason):
+    # 0. "confirm" under a Chad "Proposed rule" message -> saved as a team rule;
+    #    "mid market update" -> Chad posts an update here
+    if _confirm_rule(msg, reason) or _request_update(msg, reason):
         return
     # 1. Talking to Chad by name -> Chad answers (never counted as a vote reason)
     if CHAD_NAME.search(reason):
