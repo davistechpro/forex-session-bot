@@ -10,8 +10,26 @@ Trades draw as a shaded risk box (entry->SL, red) and reward box
 """
 from pathlib import Path
 import pandas as pd
+# Oct 29: draw charts off-screen (Agg). The Windows default (TkAgg) crashed the
+# whole watcher with "Tcl_AsyncDelete: async handler deleted by the wrong thread"
+# when Chad's background thread cleaned up a chart -- the 9:05 AM "freezes".
+# Must be set before pyplot / mplfinance are imported.
+import matplotlib
+matplotlib.use("Agg")
 import mplfinance as mpf
 import matplotlib.pyplot as plt
+
+# Nov 3 call (Devin): chart times were UTC, so 1 PM ET showed as 17:00.
+# Everything on the chart is now drawn in New York time.
+ET = "America/New_York"
+
+
+def _to_et(t):
+    """UTC (or naive-UTC) timestamp -> naive New York time, for plotting."""
+    t = pd.to_datetime(t)
+    if t.tzinfo is None:
+        t = t.tz_localize("UTC")
+    return t.tz_convert(ET).tz_localize(None)
 
 LINE_TIMEFRAMES = {"5", "M5", "5m", "1", "M1", "1m"}
 
@@ -56,7 +74,7 @@ def render_chart(
     trade: dict = None,
 ):
     df = candles.copy()
-    df["time"] = pd.to_datetime(df["time"])
+    df["time"] = [_to_et(t) for t in df["time"]]
     df = df.set_index("time")
     df = df.rename(columns={"open": "Open", "high": "High", "low": "Low", "close": "Close"})
 
@@ -66,7 +84,7 @@ def render_chart(
         style="charles",
         returnfig=True,
         figsize=(16, 9),
-        title=title,
+        title=(title + "  (times in ET)") if title else "times in ET",
         volume=False,
     )
     ax = axlist[0]
@@ -74,7 +92,7 @@ def render_chart(
     time_to_x = {t: i for i, t in enumerate(df.index)}
 
     def _x_for(t):
-        t = pd.to_datetime(t)
+        t = _to_et(t)
         if t in time_to_x:
             return time_to_x[t]
         nearest = min(df.index, key=lambda dt: abs((dt - t).total_seconds()))

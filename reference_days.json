@@ -1,0 +1,32 @@
+[
+ {
+  "pair": "GBP_CAD",
+  "day": "2026-10-27",
+  "why": "Gage: bot used the old Friday 4H zone; zone fix Oct 28"
+ },
+ {
+  "pair": "GBP_JPY",
+  "day": "2026-10-27",
+  "why": "planned entry 210.207 outside the 4H/1H zone (open question)"
+ },
+ {
+  "pair": "USD_JPY",
+  "day": "2026-10-27",
+  "why": "8-pip stop landed exactly on the 5m zone (open question)"
+ },
+ {
+  "pair": "USD_JPY",
+  "day": "2026-10-21",
+  "why": "watcher froze; missed 10:24 short / 12:30 long"
+ },
+ {
+  "pair": "EUR_USD",
+  "day": "2026-10-29",
+  "why": "posted PENDING short 1.11458 at 10:20"
+ },
+ {
+  "pair": "EUR_JPY",
+  "day": "2026-10-29",
+  "why": "posted 1H wick-tap SETUP at 10:20"
+ }
+]

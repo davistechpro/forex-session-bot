@@ -106,6 +106,8 @@ def post(text: str, chats=BOTH, loud: bool = False):
               + body + "\n--------------------")
         return
     for chat in chats:
+        if chat == "chad" and not notifier.chad_chat_configured():
+            chat = "setups"
         if not notifier.send_message(body, chat=chat, silent=not loud):
             print(f"CHAD: couldn't post to the {chat} chat")
             status.error("chad", f"couldn't post to the {chat} chat")
@@ -163,7 +165,8 @@ def job_morning(s):
     blocked = [(p, trading_day_block_reason(p)) for p in PAIRS]
     blocked = [f"{p.replace('_', '/')} ({why})" for p, why in blocked if why]
     if blocked:
-        lines.append("\nNot trading today: " + ", ".join(blocked))
+        # Steven, Nov 3 call: a white bubble so holidays stand out next to the green/red trades
+        lines.append("\n\u26aa Not trading today: " + ", ".join(blocked))
     post("\n".join(lines))
     s["news"] = [{"t": e["time"].isoformat(), "line": news.line(e)} for e in evs]
 
@@ -298,6 +301,25 @@ def job_summary(s):
     job_update(s, "recap")
 
 
+def job_disagreements(s):
+    """Nov 3 call: after the session, Chad reports every post where the team or
+    he disagreed with the bot (or each other), what rule it comes down to, and a
+    proposed rule where a teammate stated one. Goes to the Chad chat (or the
+    setups chat if there is none). This replaces reading votes out on the calls."""
+    from modules import agent_reviewer
+    day = now().strftime("%Y-%m-%d")
+    data = (f"TIME: {now():%A %b %d, %I:%M %p} ET\n\nDISAGREEMENTS TODAY:\n" + scorecard.disagreements_text(day)
+            + "\n\nSCORECARD: " + scorecard.text(day).replace("\n", " "))
+    try:
+        text = agent_reviewer.compose("session disagreement report", data)
+        if not text:
+            raise RuntimeError("empty reply")
+    except Exception as e:
+        status.error("chad", f"couldn't write the disagreement report: {e}")
+        text = "Disagreement report (raw data, I couldn't write it up):\n" + data
+    post(text, chats=("chad",) if notifier.chad_chat_configured() else ("setups",))
+
+
 def job_requests(s):
     """Answer 'mid market update' / 'Chad, recap' / 'Chad, oil report' requests
     from the chat: post the update in the chat that asked, as a reply."""
@@ -348,7 +370,7 @@ def job_oil_report(s):
 
 
 JOBS = {"morning": job_morning, "check": job_check, "update": job_update, "summary": job_summary,
-        "oilreport": job_oil_report}
+        "oilreport": job_oil_report, "disagreements": job_disagreements}
 
 
 # ------------------------------------------------------------------ loop
@@ -396,6 +418,10 @@ def main():
                     s["done"].append("oilreport")
                     save_state(s)
                     job_oil_report(s)
+                if hm >= (13, 5) and "disagreements" not in s["done"] and hm < (14, 0):
+                    s["done"].append("disagreements")
+                    save_state(s)
+                    job_disagreements(s)
                 for slot, kind in UPDATE_SLOTS:
                     key = f"update {slot[0]}:{slot[1]:02d}"
                     late = (slot[0] * 60 + slot[1] + 40) // 60, (slot[1] + 40) % 60

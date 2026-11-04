@@ -30,3 +30,6 @@ status/
 chad_feedback.csv
 chat_log.csv
 chat_media/
+
+# replay_check.py frozen candles (re-downloadable); snapshots ARE kept in git
+replay_data/

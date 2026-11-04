@@ -222,17 +222,78 @@ def _log(row: dict):
             w.writerow({k: row.get(k, "") for k in LOG_FIELDS})
 
 
-def _run(sent_result, post_text, chart_path, post_type, chat, pair, signal_id,
-         posted_at=None, facts=None):
-    text = None
-    for attempt in range(1, 4):
+def _review_with_retries(post_text, chart_path, post_type, chat, pair, posted_at=None, facts=None,
+                         attempts: int = 3):
+    for attempt in range(1, attempts + 1):
         try:
-            text = review(post_text, chart_path, post_type, chat, posted_at, facts)
-            break
+            return review(post_text, chart_path, post_type, chat, posted_at, facts)
         except Exception as e:
-            print(f"AGENT: review attempt {attempt}/3 failed for {pair} ({type(e).__name__}: {e})")
-            if attempt < 3:
+            print(f"AGENT: review attempt {attempt}/{attempts} failed for {pair} ({type(e).__name__}: {e})")
+            if attempt < attempts:
                 time.sleep(15 * attempt)
+    return None
+
+
+def _short_reason(text: str) -> str:
+    """The one-line reason for the post: line 2 of the v0.9+ format."""
+    lines = [l.strip() for l in (text or "").splitlines() if l.strip()]
+    body = [l for l in lines[1:] if not l.startswith("--")]
+    why = body[0] if body else ""
+    return why if len(why) <= 220 else why[:217] + "..."
+
+
+def record_chad_vote(signal_id, verdict: str, text: str, post_type: str):
+    """Nov 3 call: Chad is the fourth voter. His verdict goes into signal_map
+    (so it renders on the post) and votes.csv (next to the team's)."""
+    if not signal_id or verdict not in ("VALID", "INVALID", "UNSURE"):
+        return
+    token = notifier.short_token(signal_id)
+    reason = _short_reason(text)
+    sig = notifier.record_vote(token, notifier.CHAD_VOTER, verdict.lower(), reason=reason, user_id="chad")
+    notifier.append_vote_row({
+        "voted_at_et": datetime.now(NY_TZ).strftime("%Y-%m-%d %H:%M:%S"),
+        "voter": notifier.CHAD_VOTER, "verdict": verdict.lower(), "reason": reason,
+        "signal_token": token, "post_type": sig.get("post_type") or post_type,
+        **{k: sig.get(k, "") for k in notifier.SIGNAL_FIELDS},
+    })
+    try:
+        notifier.refresh_tally(token)
+    except Exception as e:
+        print(f"AGENT: couldn't put the verdict on the post ({e})")
+
+
+def _publish(sent_result, text: str, pair: str, post_type: str, held: bool = False):
+    """Where the full review goes. With a Chad chat: there, with a link back to
+    the post, and nothing extra in the trade chat (the verdict line on the post
+    is enough). Without one: a silent reply under the post, as before."""
+    sign = os.getenv("AGENT_SIGNATURE", "-- Chad")
+    body = text if len(text) <= 3600 else text[:3590] + "\n..."
+    chat_id = (sent_result or {}).get("chat", {}).get("id")
+    msg_id = (sent_result or {}).get("message_id")
+    if notifier.chad_chat_configured():
+        link = notifier.post_link(chat_id, msg_id) if chat_id and msg_id else ""
+        head = f"{pair.replace('_', '/')} {post_type.upper()}" + (" (HELD -- not posted to the team)" if held else "")
+        if link:
+            head += f"\n{link}"
+        notifier._call("sendMessage", {
+            "chat_id": notifier._chat_id("chad"),
+            "text": f"{head}\n\n{body}\n\n{sign}",
+            "disable_notification": True, "disable_web_page_preview": True,
+        })
+        try:
+            notifier.log_chat(notifier._chat_id("chad"), "Chad", f"{head}\n{body}")
+        except Exception:
+            pass
+    elif chat_id and msg_id:
+        notifier._call("sendMessage", {
+            "chat_id": chat_id, "text": body + "\n\n" + sign,
+            "reply_to_message_id": msg_id, "disable_notification": True,
+        })
+
+
+def _run(sent_result, post_text, chart_path, post_type, chat, pair, signal_id,
+         posted_at=None, facts=None, pre_text=None):
+    text = pre_text or _review_with_retries(post_text, chart_path, post_type, chat, pair, posted_at, facts)
     if text is None:
         print(f"AGENT: giving up on {pair} -- post went out without a review")
         try:
@@ -242,15 +303,8 @@ def _run(sent_result, post_text, chart_path, post_type, chat, pair, signal_id,
             pass
         return
     verdict = _verdict(text)
-    sign = os.getenv("AGENT_SIGNATURE", "-- Chad")
-    reply = text if len(text) <= 3800 else text[:3790] + "\n..."
-    reply += "\n\n" + sign
-    notifier._call("sendMessage", {
-        "chat_id": sent_result["chat"]["id"],
-        "text": reply,
-        "reply_to_message_id": sent_result["message_id"],
-        "disable_notification": True,
-    })
+    record_chad_vote(signal_id, verdict, text, post_type)
+    _publish(sent_result, text, pair, post_type)
     _log({
         "reviewed_at": datetime.now(NY_TZ).isoformat(timespec="seconds"),
         "post_type": post_type, "chat": chat, "pair": pair,
@@ -260,9 +314,59 @@ def _run(sent_result, post_text, chart_path, post_type, chat, pair, signal_id,
     print(f"AGENT: {pair} {post_type} -> {verdict}")
 
 
+# ------------------------------------------------------------------ gate (phase 3, off by default)
+
+def gate_enabled() -> bool:
+    """CHAD_GATE=on in .env: Chad reviews BEFORE a trade posts and an INVALID
+    holds it back (sent to the Chad chat only). Off until his agreement with
+    the team's votes has earned it (Gage's bar: ~90%)."""
+    return enabled() and os.getenv("CHAD_GATE", "off").strip().lower() in ("on", "1", "true", "yes")
+
+
+def pre_review(post_text, chart_path, post_type, chat, pair, facts=None, timeout: int = 75):
+    """Synchronous review for the gate. Returns (verdict, text); on timeout or
+    error returns ("TIMEOUT", None) and the caller posts the trade anyway --
+    a Foundry outage must never block trades."""
+    box = {}
+
+    def _go():
+        box["text"] = _review_with_retries(post_text, chart_path, post_type, chat, pair, None, facts, attempts=1)
+
+    th = threading.Thread(target=_go, daemon=True)
+    th.start()
+    th.join(timeout)
+    text = box.get("text")
+    if not text:
+        return "TIMEOUT", None
+    return _verdict(text), text
+
+
+def publish_held(text: str, post_text: str, chart_path, pair: str, post_type: str, signal_id=None):
+    """Gate held a trade: the bot's post + Chad's review go to the Chad chat only."""
+    if not notifier.chad_chat_configured():
+        return
+    cid = notifier._chat_id("chad")
+    head = f"HELD by Chad -- {pair.replace('_', '/')} {post_type.upper()} (not posted to the team)"
+    sent = None
+    if chart_path and Path(chart_path).exists():
+        with open(chart_path, "rb") as fh:
+            sent = notifier._call("sendPhoto", {"chat_id": cid, "caption": f"{head}\n\n{_plain(post_text)}"[:1024]},
+                                  files={"photo": fh})
+    else:
+        sent = notifier._call("sendMessage", {"chat_id": cid, "text": f"{head}\n\n{_plain(post_text)}"})
+    _publish(sent, text, pair, post_type, held=True)
+    _log({
+        "reviewed_at": datetime.now(NY_TZ).isoformat(timespec="seconds"),
+        "post_type": post_type, "chat": "chad (held)", "pair": pair,
+        "signal_token": notifier.short_token(signal_id) if signal_id else "",
+        "verdict": "INVALID", "review": text, "facts": "",
+    })
+
+
 def review_async(sent_result, post_text, chart_path=None, post_type="setup",
-                 chat="setups", pair="", signal_id=None, facts=None):
-    """Fire-and-forget: grade the post that was just sent and reply under it."""
+                 chat="setups", pair="", signal_id=None, facts=None, pre_text=None):
+    """Fire-and-forget: grade the post that was just sent, put the verdict on
+    it and publish the reasoning. pre_text = a review the gate already got."""
     if not sent_result or not isinstance(sent_result, dict) or not enabled():
         return
     if signal_id and facts:
@@ -272,7 +376,7 @@ def review_async(sent_result, post_text, chart_path=None, post_type="setup",
             pass
     threading.Thread(
         target=_run,
-        args=(sent_result, post_text, chart_path, post_type, chat, pair, signal_id, None, facts),
+        args=(sent_result, post_text, chart_path, post_type, chat, pair, signal_id, None, facts, pre_text),
         daemon=True,
     ).start()
 

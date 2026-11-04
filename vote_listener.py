@@ -32,16 +32,10 @@ from modules import agent_reviewer
 _last_beat = [0.0]
 
 NY_TZ = pytz.timezone("America/New_York")
-VOTES_FILE = Path("votes.csv")
+VOTES_FILE = notifier.VOTES_FILE
 OFFSET_FILE = Path("vote_offset.json")
-
-FIELDS = [
-    "voted_at_et", "voter", "verdict", "reason", "pair", "direction",
-    "entry_price", "entry_level", "sl_pips", "method",
-    "trend", "zone", "triggered_at", "signal_token", "post_type",
-]
-SIGNAL_FIELDS = ["pair", "direction", "entry_price", "entry_level",
-                 "sl_pips", "method", "trend", "zone", "triggered_at"]
+FIELDS = notifier.VOTE_FIELDS            # shared with the watcher: Chad votes too (Nov 3)
+SIGNAL_FIELDS = notifier.SIGNAL_FIELDS
 
 
 # ---------------------------------------------------------------- storage
@@ -85,12 +79,7 @@ def _migrate_votes_csv():
 
 
 def _append_vote(row: dict):
-    new_file = not VOTES_FILE.exists()
-    with VOTES_FILE.open("a", newline="", encoding="utf-8") as fh:
-        w = csv.DictWriter(fh, fieldnames=FIELDS)
-        if new_file:
-            w.writeheader()
-        w.writerow({k: row.get(k, "") for k in FIELDS})
+    notifier.append_vote_row(row)
 
 
 def _voter_name(user: dict) -> str:
@@ -100,17 +89,7 @@ def _voter_name(user: dict) -> str:
 # ------------------------------------------------------------------ tally
 
 def _refresh_tally(token: str):
-    sig = notifier.lookup_signal(token)
-    chat_id, msg_id = sig.get("alert_chat_id"), sig.get("alert_message_id")
-    if not chat_id or not msg_id:
-        return
-    tally = notifier.format_vote_tally(sig.get("votes", {}), sig.get("pending", {}))
-    if tally == sig.get("last_tally"):
-        return
-    base = sig.get("base_text", "")
-    notifier.edit_text(chat_id, msg_id, base + tally, token=token,
-                       is_photo=bool(sig.get("alert_is_photo")))
-    notifier.remember_tally(token, tally)
+    notifier.refresh_tally(token)
 
 
 # -------------------------------------------------------------- handlers

@@ -30,7 +30,48 @@ LVL_NAMES = {"H4": "4H", "H1": "1H", "15": "15m", "5": "5m", "1": "1m"}
 def _chat_id(kind: str = "trades"):
     if kind == "setups":
         return os.getenv("TELEGRAM_SETUPS_CHAT_ID")
+    if kind == "chad":
+        # Nov 3 call (Gage): Chad's full reasoning, questions and reports live in
+        # their own group so the trade chats stay clean. Optional: without it,
+        # Chad replies under the post like before.
+        return os.getenv("TELEGRAM_CHAD_CHAT_ID")
     return os.getenv("TELEGRAM_TRADES_CHAT_ID") or os.getenv("TELEGRAM_CHAT_ID")
+
+
+def chad_chat_configured() -> bool:
+    return bool(os.getenv("TELEGRAM_BOT_TOKEN") and _chat_id("chad"))
+
+
+CHAD_VOTER = "Chad"
+
+# votes.csv -- one row per vote, team and Chad alike. Written by the vote
+# listener (team) and by the watcher (Chad), so the writer lives here.
+VOTES_FILE = Path("votes.csv")
+VOTE_FIELDS = [
+    "voted_at_et", "voter", "verdict", "reason", "pair", "direction",
+    "entry_price", "entry_level", "sl_pips", "method",
+    "trend", "zone", "triggered_at", "signal_token", "post_type",
+]
+SIGNAL_FIELDS = ["pair", "direction", "entry_price", "entry_level",
+                 "sl_pips", "method", "trend", "zone", "triggered_at"]
+
+
+def append_vote_row(row: dict):
+    import csv
+    new_file = not VOTES_FILE.exists()
+    with VOTES_FILE.open("a", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=VOTE_FIELDS)
+        if new_file:
+            w.writeheader()
+        w.writerow({k: row.get(k, "") for k in VOTE_FIELDS})
+
+
+def post_link(chat_id, message_id) -> str:
+    """t.me link to a message in a group (supergroups: -100<id>)."""
+    cid = str(chat_id)
+    if cid.startswith("-100"):
+        return f"https://t.me/c/{cid[4:]}/{message_id}"
+    return ""
 
 
 def is_configured() -> bool:
@@ -51,6 +92,8 @@ def chat_name(chat_id) -> str:
         return "setups"
     if cid == str(_chat_id("trades")):
         return "trades"
+    if cid == str(_chat_id("chad")):
+        return "chad"
     return cid
 
 
@@ -275,14 +318,27 @@ def _vote_entries(votes: dict):
     return out
 
 
+VERDICT_MARK = {"valid": "\u2705 VALID", "invalid": "\u274c INVALID", "unsure": "\u2753 UNSURE"}
+
+
 def format_vote_tally(votes: dict, pending: dict = None) -> str:
+    """Chad's verdict sits on the post as one line (Nov 3 call); the team's
+    votes are counted below it, without Chad."""
     entries = _vote_entries(votes or {})
     pending = pending or {}
-    if not entries and not pending:
+    chad = next((e for e in entries if e["name"] == CHAD_VOTER), None)
+    team = [e for e in entries if e["name"] != CHAD_VOTER]
+    if not chad and not team and not pending:
         return ""
-    lines = ["", "", "<b>Votes</b>"]
-    valid = [e["name"] for e in entries if e["verdict"] == "valid"]
-    invalid = [e["name"] for e in entries if e["verdict"] == "invalid"]
+    lines = [""]
+    if chad:
+        mark = VERDICT_MARK.get(chad["verdict"], chad["verdict"].upper())
+        why = html.escape((chad.get("reason") or "").strip(), quote=False)
+        lines.append(f"\n<b>Chad:</b> {mark}" + (f" -- {why}" if why else ""))
+    if team or pending:
+        lines.append("\n<b>Votes</b>")
+    valid = [e["name"] for e in team if e["verdict"] == "valid"]
+    invalid = [e["name"] for e in team if e["verdict"] == "invalid"]
     if valid:
         lines.append(f"Valid ({len(valid)}): {', '.join(valid)}")
     if invalid:
@@ -291,6 +347,20 @@ def format_vote_tally(votes: dict, pending: dict = None) -> str:
         waiting = ", ".join(f"{p['name']} ({p['verdict']})" for p in pending.values())
         lines.append(f"<i>Awaiting reason: {waiting}</i>")
     return "\n".join(lines)
+
+
+def refresh_tally(token: str):
+    """Re-render the post with the current Chad line + team votes (no-op if unchanged)."""
+    sig = lookup_signal(token)
+    chat_id, msg_id = sig.get("alert_chat_id"), sig.get("alert_message_id")
+    if not chat_id or not msg_id:
+        return
+    tally = format_vote_tally(sig.get("votes", {}), sig.get("pending", {}))
+    if tally == sig.get("last_tally"):
+        return
+    edit_text(chat_id, msg_id, sig.get("base_text", "") + tally, token=token,
+              is_photo=bool(sig.get("alert_is_photo")))
+    remember_tally(token, tally)
 
 
 def _fmt(pair):

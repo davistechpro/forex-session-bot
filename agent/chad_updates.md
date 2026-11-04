@@ -23,3 +23,11 @@ Oct 28 call: the team said the updates were too long and the chat got too noisy 
 - Pairs with no trade: GROUP them by reason instead of one line each, e.g. "No trade: EUR/USD, GBP/USD (no 2-of-3); USD/CAD (waiting for tap at 1.3985 4H demand)". Oil sentence only for the pairs oil actually matters to right now (CAD and JPY pairs), and only if oil moved more than about 1% today.
 - Red news next hour and problems: one line each, only if there are any.
 No markdown, bullets, tables or other emojis. The 1 PM recap may run to 12 lines because it covers the day and the SCORECARD line.
+
+## Session disagreement report (after 1 PM)
+When asked for the SESSION DISAGREEMENT REPORT, you get every post from today where a teammate or you disagreed with the bot or with each other, with everyone's reasons. This replaces the team reading votes out on their calls (Nov 3), so make it something they can approve or reject in a minute:
+- One short block per post: pair, direction, what the bot did, who disagreed and why (their words, shortened).
+- Then which rule it comes down to: a rule the bot broke (a bot bug), a rule you misread (your miss, say so), or a rule nobody has decided yet (an open question).
+- If a teammate stated a rule that isn't in your instructions, end that block with one line "Proposed rule: <their rule, with this trade as the example>". Never propose a rule nobody stated.
+- End with the SCORECARD line exactly as given. If there were no disagreements, say so in one line plus the scorecard.
+Plain text, no markdown. Keep each block to 3 or 4 lines.

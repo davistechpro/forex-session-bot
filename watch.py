@@ -33,6 +33,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import os
+os.environ.setdefault("MPLBACKEND", "Agg")   # off-screen charts; Tk crashed the watcher (Oct 29)
+
 import pandas as pd
 
 from modules.data_feed import get_candles
@@ -277,12 +280,28 @@ def post_trade(pair, result, state, dry_run):
         "filled_at": str(e.get("filled_at", "")),
     })
 
+    # Phase 3 gate (CHAD_GATE=on in .env, off by default): Chad grades the
+    # trade BEFORE it posts; an INVALID holds it back (Chad chat only). A
+    # timeout or error never blocks a trade -- it posts and he reviews after.
+    facts = agent_reviewer.facts_from(result)
+    pre_text = None
+    if agent_reviewer.gate_enabled():
+        verdict, pre_text = agent_reviewer.pre_review(text, chart, "active", "trades", pair, facts)
+        print(f"  Chad gate: {verdict}")
+        if verdict == "INVALID":
+            state["sent"].append(sid)
+            state.setdefault("held", []).append(sid)
+            save_state(state)
+            agent_reviewer.publish_held(pre_text, text, chart, pair, "active", sid)
+            status.note_pair(pair, f"trade HELD by Chad gate: {agent_reviewer._short_reason(pre_text)}")
+            return 0
+
     ok = (notifier.send_photo(chart, text, signal_id=sid, chat="trades") if chart
           else notifier.send_message(text, signal_id=sid, chat="trades"))
     if ok:
         state["sent"].append(sid)
         save_state(state)
-        agent_reviewer.review_async(ok, text, chart, "active", "trades", pair, sid, facts=agent_reviewer.facts_from(result))
+        agent_reviewer.review_async(ok, text, chart, "active", "trades", pair, sid, facts=facts, pre_text=pre_text)
         status.record_trade(sid, pair, e, "active")
         print("  trade alert sent" + (" with chart" if chart else " (text only)"))
         return 1
