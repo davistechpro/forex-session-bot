@@ -48,7 +48,10 @@ def _overlaps_active_zone(zones: list, zone_type: str, top: float, bottom: float
     return False
 
 
-def detect_zones(candles: pd.DataFrame, timeframe_label: str = "") -> list:
+def detect_zones(candles: pd.DataFrame, timeframe_label: str = "", dedupe: bool = True) -> list:
+    """dedupe=False keeps a new zone even when it overlaps a live zone of the
+    same type (used by trend_v2 to see every push; the live bot and the
+    TradingView indicator keep dedupe=True)."""
     candles = candles.reset_index(drop=True)
     n = len(candles)
     zones = []
@@ -90,7 +93,7 @@ def detect_zones(candles: pd.DataFrame, timeframe_label: str = "") -> list:
                 origin = candles.iloc[i - k]
                 if _is_green(origin) and row["close"] < origin["low"]:
                     top, bottom = origin["high"], origin["low"]
-                    if not _overlaps_active_zone(zones, "supply", top, bottom):
+                    if not dedupe or not _overlaps_active_zone(zones, "supply", top, bottom):
                         zones.append({
                             "type": "supply",
                             "timeframe": timeframe_label,
@@ -110,7 +113,7 @@ def detect_zones(candles: pd.DataFrame, timeframe_label: str = "") -> list:
                 origin = candles.iloc[i - k]
                 if _is_red(origin) and row["close"] > origin["high"]:
                     top, bottom = origin["high"], origin["low"]
-                    if not _overlaps_active_zone(zones, "demand", top, bottom):
+                    if not dedupe or not _overlaps_active_zone(zones, "demand", top, bottom):
                         zones.append({
                             "type": "demand",
                             "timeframe": timeframe_label,

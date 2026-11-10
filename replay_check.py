@@ -16,6 +16,15 @@ The routine for every TRADE-LOGIC change (see CHANGELOG.md):
   If only the intended days/pairs changed -> log it and ship it.
   If anything else moved -> stop and look before going live.
 
+Trend v2 (Nov 10, shadow until confirmed):
+  py replay_check.py --trend v2              replay with the trend fix
+  py replay_check.py --compare NAME --trend v2   fix vs a saved baseline
+  py replay_check.py --why GBP_JPY 2026-11-09 09:00
+                                             why each timeframe got its trend, live vs fix
+
+Reference days can carry the team's read ("expect"); every run ends with a
+TEAM CHECK: how many of those the current logic gets right.
+
 Other:
   py replay_check.py                         run and print, save nothing
   py replay_check.py --add GBP_CAD 2026-10-27 "Gage: wrong 4H zone"
@@ -35,6 +44,8 @@ load_dotenv()
 
 import modules.data_feed as data_feed  # noqa: E402
 import modules.scan_engine as se  # noqa: E402
+from modules.trend import determine_trend as _live_trend  # noqa: E402
+from modules.trend_v2 import determine_trend_v2, explain  # noqa: E402
 
 NY = pytz.timezone("America/New_York")
 ROOT = Path(__file__).resolve().parent
@@ -151,6 +162,15 @@ def replay(pair, day):
     return out
 
 
+def use_trend(mode: str):
+    """'live' = modules/trend.py, 'v2' = both fixes, 'A'/'B' = one fix."""
+    if mode == "live":
+        se.determine_trend = _live_trend
+    else:
+        fixes = "AB" if mode == "v2" else mode
+        se.determine_trend = lambda c, tf="": determine_trend_v2(c, tf, fixes)
+
+
 def run_all():
     res = {}
     for d in load_days():
@@ -158,6 +178,55 @@ def run_all():
         print(f"replaying {key} ...", file=sys.stderr)
         res[key] = replay(d["pair"], d["day"])
     return res
+
+
+TF_IDX = {"D": 0, "4H": 1, "1H": 2}
+
+
+def team_check(res):
+    """Score the replay against the team's read on the days that have one."""
+    days = [d for d in load_days() if d.get("expect")]
+    if not days:
+        return
+    hit = total = 0
+    print("\nTEAM CHECK (does the bot's trend match what the team said?)")
+    for d in days:
+        key = f"{d['pair']} {d['day']}"
+        e = d["expect"]
+        step = (res.get(key) or {}).get(e["time"], "")
+        if not step.startswith("D/4H/1H "):
+            print(f"  {key} {e['time']}: no data ({step[:60]})")
+            continue
+        trends = step.split()[1].split("/")
+        marks = []
+        for tf, want in e["trends"].items():
+            got = trends[TF_IDX[tf]]
+            total += 1
+            ok = got == want
+            hit += ok
+            marks.append(f"{tf} {got}{' OK' if ok else ' MISS (team: ' + want + ')'}")
+        print(f"  {key} {e['time']}: " + ", ".join(marks))
+    print(f"  -> {hit} of {total} timeframe calls match the team")
+
+
+def why(pair, day, hhmm):
+    """trend_why: for one moment, what decided each timeframe, live vs fix."""
+    t = NY.localize(datetime.strptime(f"{day} {hhmm}", "%Y-%m-%d %H:%M"))
+    now_utc = pd.Timestamp(t).tz_convert("UTC")
+    counts = {"D": 60, "H4": 120, "H1": 200}
+    print(f"{pair} at {day} {hhmm} ET (closed candles only)\n")
+    for tf, label in (("D", "Daily"), ("H4", "4H"), ("H1", "1H")):
+        df = frozen(pair, day, tf)
+        df = df[df["time"] + pd.Timedelta(minutes=TF_MIN[tf]) <= now_utc].tail(counts[tf]).reset_index(drop=True)
+        last = df["close"].iloc[-1] if len(df) else None
+        live = _live_trend(df, tf)
+        print(f"{label:5}  price {last}")
+        print(f"   live : {explain(live)}")
+        for f, name in (("A", "fix A (touch)"), ("B", "fix B (push)"), ("AB", "fix A+B")):
+            v = determine_trend_v2(df, tf, f)
+            flag = "" if v["trend"] == live["trend"] else "   <-- CHANGED"
+            print(f"   {name:13}: {explain(v)}{flag}")
+        print()
 
 
 # ------------------------------------------------------------------ main
@@ -168,7 +237,16 @@ def main():
     ap.add_argument("--compare", metavar="NAME")
     ap.add_argument("--add", nargs=3, metavar=("PAIR", "DAY", "WHY"))
     ap.add_argument("--list", action="store_true")
+    ap.add_argument("--trend", default="live", choices=["live", "v2", "A", "B"])
+    ap.add_argument("--why", nargs=3, metavar=("PAIR", "DAY", "HH:MM"))
     a = ap.parse_args()
+
+    if a.why:
+        why(a.why[0].upper(), a.why[1], a.why[2])
+        return
+    use_trend(a.trend)
+    if a.trend != "live":
+        print(f"(replaying with trend {a.trend})", file=sys.stderr)
 
     if a.add:
         add_day(a.add[0].upper(), a.add[1], a.add[2])
@@ -185,6 +263,7 @@ def main():
         path = SNAP_DIR / f"{a.save}.json"
         path.write_text(json.dumps(res, indent=1), encoding="utf-8")
         print(f"Saved {len(res)} reference days to {path}")
+        team_check(res)
         return
 
     if a.compare:
@@ -207,6 +286,7 @@ def main():
             for t, b, s in diffs:
                 print(f"  {t}  BEFORE {b}\n         AFTER  {s}")
         print(f"\n{changed} of {len(res)} reference days changed.")
+        team_check(res)
         return
 
     for key, steps in res.items():
@@ -216,6 +296,7 @@ def main():
             if s != last:
                 print(f"  {t}  {s}")
                 last = s
+    team_check(res)
 
 
 if __name__ == "__main__":

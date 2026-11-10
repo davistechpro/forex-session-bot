@@ -28,5 +28,65 @@
   "pair": "EUR_JPY",
   "day": "2026-10-29",
   "why": "posted 1H wick-tap SETUP at 10:20"
+ },
+ {
+  "pair": "GBP_JPY",
+  "day": "2026-11-05",
+  "why": "Gage: Daily and 4H bullish, bot shorted (posted 10:07)",
+  "expect": {
+   "time": "10:00",
+   "trends": {
+    "D": "bullish",
+    "4H": "bullish"
+   }
+  }
+ },
+ {
+  "pair": "EUR_JPY",
+  "day": "2026-11-05",
+  "why": "Gage: Daily and 4H bullish, bot shorted (posted 9:07)",
+  "expect": {
+   "time": "09:00",
+   "trends": {
+    "D": "bullish",
+    "4H": "bullish"
+   }
+  }
+ },
+ {
+  "pair": "EUR_USD",
+  "day": "2026-11-09",
+  "why": "Gage + Steven: Daily and 4H bearish, bot went long (posted 9:05)",
+  "expect": {
+   "time": "09:00",
+   "trends": {
+    "D": "bearish",
+    "4H": "bearish"
+   }
+  }
+ },
+ {
+  "pair": "GBP_USD",
+  "day": "2026-11-09",
+  "why": "Gage + Steven: Daily and 1H bullish, 4H bearish; bot shorted (posted 9:06)",
+  "expect": {
+   "time": "09:00",
+   "trends": {
+    "D": "bullish",
+    "4H": "bearish",
+    "1H": "bullish"
+   }
+  }
+ },
+ {
+  "pair": "GBP_JPY",
+  "day": "2026-11-09",
+  "why": "Steven: Daily bullish, bot called it bearish (posted 9:07)",
+  "expect": {
+   "time": "09:00",
+   "trends": {
+    "D": "bullish"
+   }
+  }
  }
 ]

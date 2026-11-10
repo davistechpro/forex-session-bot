@@ -51,7 +51,45 @@ REVERT:   exact command
   (zones live longer), the Sept 9 invalidation fix, and the overlap rule (a
   new zone overlapping a live one is skipped). Next step: Gage/Steven send
   3-5 wrong-trend posts -> add them as reference days -> replay them on the
-  tags around each suspect.
+  tags around each suspect. UPDATE Nov 10: 5 posts received; two code flaws
+  found (rejection touch check, hidden newest push); fix running in shadow.
+  If `--why` shows the live trend coming from a push that is many days old,
+  there is a third cause: a steady trend with no pullback candle never makes
+  a new push, so the trend stays on the old one. That one needs a team rule.
+
+---
+
+## 2026-11-10  Trend v2 in SHADOW (live trading unchanged)
+TAG:      shadow-trend-2026-11-10   (previous: chad-v1-2026-11-03)
+WHAT:     `modules/trend_v2.py` = the live trend rule plus two fixes:
+          A "touch": a rejection only counts if the candle actually enters
+            the zone (the written rule). Live code only checked one side, so a
+            red candle anywhere above an old supply zone could count.
+          B "push": the newest push is taken from every push, including new
+            zones the zone list skips because they overlap a live one.
+          The watcher runs it side by side on the SAME candles after each
+          pass's posts (`modules/shadow.py`): logs every scan to
+          status/shadow_DATE.csv and posts a quiet "SHADOW" line in the Chad
+          chat when the fix would act differently. `py shadow_report.py`
+          lists the day's differences next to the team's votes.
+          `replay_check.py`: --trend v2|A|B, --why PAIR DAY HH:MM, and a
+          TEAM CHECK score; 5 flagged posts added as reference days with the
+          team's read (Nov 5 GBP/JPY, EUR/JPY; Nov 9 EUR/USD, GBP/USD, GBP/JPY).
+          `detect_zones(dedupe=...)` parameter added; default = old behaviour.
+WHY:      Gage + Steven, Nov 5-9: "marking the right zones but marking
+          direction wrong", mostly the Daily.
+AFFECTS:  Trade decisions: NO. Live trend still comes from modules/trend.py.
+          Adds ~2 s per pair per pass, after the posts. SHADOW_TREND=off disables.
+PROOF:    trend_v2 with no fixes == live trend on 400 random series.
+          Shadow ran on frozen Oct 29 scans with no errors.
+          Replay of the 6 earlier reference days with v2: 0 of 6 changed
+          (nothing that was right before moves). The 5 flagged days need the
+          desktop (OANDA): py replay_check.py --trend v2.
+TO GO LIVE: only after the team confirms from the shadow log; then one line in
+          scan_engine.py (import determine_trend from trend_v2), its own
+          entry, replay check, tag.
+REVERT:   git checkout chad-v1-2026-11-03 -- watch.py modules/zone_detector.py replay_check.py
+          (or SHADOW_TREND=off and restart watch.py)
 
 ---
 

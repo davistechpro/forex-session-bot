@@ -40,6 +40,7 @@ import pandas as pd
 
 from modules.data_feed import get_candles
 from modules.scan_engine import run_scan, is_ny_session_now, trading_day_block_reason
+from modules import shadow
 from modules.setup_planner import build_setup
 from modules import notifier
 from modules import heartbeat
@@ -324,7 +325,8 @@ def scan_pass(pairs, state, win, dry_run=False, ignore_calendar=False, send_setu
                 continue
 
         try:
-            result = run_scan(pair, render_chart_image=False)
+            with shadow.recording():          # keeps a copy of the candles for the shadow
+                result = run_scan(pair, render_chart_image=False)
         except Exception as e:
             print(f"  {pair}: scan failed -- {e}")
             status.error("watch", f"{pair} scan failed: {e}")
@@ -332,6 +334,7 @@ def scan_pass(pairs, state, win, dry_run=False, ignore_calendar=False, send_setu
             continue
 
         status.note_pair(pair, status.summarize(result))
+        shadow.queue(pair, result)            # trend v2 side by side, run after this pass's posts
         if result.get("entry"):
             if not win["trades"]:
                 print(f"  {pair}: entry found but outside 9:00 AM - 12:59 PM ET -- held")
@@ -359,6 +362,7 @@ def scan_pass(pairs, state, win, dry_run=False, ignore_calendar=False, send_setu
         skip = result.get("skip_reason")
         print(f"  {pair}: {direction} -- nothing qualifying" + (f" ({skip})" if skip else ""))
 
+    shadow.flush()                            # all live posts are out; now the trend v2 comparison
     return count
 
 
