@@ -59,6 +59,18 @@ REVERT:   exact command
 
 ---
 
+## 2026-11-11  Trend board layout + escaped-text fix
+TAG:      trend-board-v2-2026-11-11   (previous: trend-board-2026-11-11)
+WHAT:     Board is a fixed-width table (▲/▼ per timeframe, 🟢 LONG / 🔴 SHORT),
+          holiday note once at the top, scan problems listed under the table.
+          Fix: Chad's replies to requests ("mid market update", "Chad,
+          trends", recap, oil report) were HTML-escaped but sent without
+          parse_mode, so "->" showed as "-&gt;". Now sent as HTML.
+AFFECTS:  Trade decisions: no. Presentation only.
+REVERT:   git checkout trend-board-2026-11-11 -- chad.py
+
+---
+
 ## 2026-11-11  Trend board in Telegram
 TAG:      trend-board-2026-11-11   (previous: zone-break-shadow-2026-11-11)
 WHAT:     Chad posts a trend board: a FRESH scan of every pair, the same

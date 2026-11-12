@@ -320,12 +320,16 @@ def _fresh_scan_rows() -> tuple:
     return rows, now().strftime("%I:%M %p")
 
 
+ARROW = {"bullish": "\u25b2", "bearish": "\u25bc"}       # ▲ ▼
+
+
 def trend_board(fresh: bool = True) -> str:
     """Nov 11: the Streamlit app's system in Telegram -- a fresh scan of every
-    pair (same run_scan the app's "Scan now" calls) laid out like the app,
-    plus the zone-break shadow's read where it differs."""
+    pair (same run_scan the app's "Scan now" calls) laid out as a table,
+    plus the zone-break shadow's read where it differs. Returns Telegram HTML."""
     import csv as _csv
     import re as _re
+    from html import escape as esc
     if fresh:
         pairs, scanned_at = _fresh_scan_rows()
     else:
@@ -335,38 +339,60 @@ def trend_board(fresh: bool = True) -> str:
     if path.exists():
         for r in _csv.DictReader(path.open(encoding="utf-8")):
             shadow[r["pair"]] = r          # latest row per pair
-    lines, latest = [], ""
+    a = lambda t: ARROW.get(t, "?")
+    rows, holidays, problems, latest = [], {}, [], ""
     for pair in PAIRS:
         p = pairs.get(pair) or {}
         out, at = p.get("outcome", ""), p.get("time", "")
         latest = max(latest, at) if at else latest
         name = pair.replace("_", "/")
+        if p.get("holiday"):
+            holidays.setdefault(p["holiday"], []).append(name)
         m = _re.search(r"trend D/4H/1H (\w+)/(\w+)/(\w+) \| direction ([\w ()-]+?)(?: \||$)", out)
         if not m:
-            why = out[:60] if out else "no scan yet"
-            lines.append(f"\u26aa {name:8} {why}")
+            problems.append(f"{name}: {out[:70] if out else 'no scan yet'}")
             continue
         d, h4, h1, direction = m.groups()
         direction = direction.split()[0]
-        mark = {"bullish": "\U0001f7e2", "bearish": "\U0001f534"}.get(direction, "\u26aa")
-        dir_txt = direction.upper() if direction in ("bullish", "bearish") else "NO DIRECTION"
-        if p.get("holiday"):
-            mark, dir_txt = "\u26aa", dir_txt + "  (no trading today: " + p["holiday"] + ")"
-        lines.append(f"{mark} {name:8} D {TF_SHORT.get(d, d):4} 4H {TF_SHORT.get(h4, h4):4} "
-                     f"1H {TF_SHORT.get(h1, h1):4} -> {dir_txt}")
+        side = {"bullish": "\U0001f7e2 LONG", "bearish": "\U0001f534 SHORT"}.get(direction, "\u26aa NONE")
+        rows.append(f"{name:<9}  {a(d)}  {a(h4)}   {a(h1)}   {side}")
         sh = shadow.get(pair)
         if sh:
-            diffs = [f"{tf} {TF_SHORT.get(sh[k], sh[k])}" for tf, k, live in
+            diffs = [f"{tf} {a(sh[k])}" for tf, k, live in
                      (("D", "fix_d", d), ("4H", "fix_h4", h4), ("1H", "fix_h1", h1)) if sh[k] != live]
             if diffs:
-                lines.append(f"      zone-break test: {', '.join(diffs)}")
+                rows.append(f"{'':<11}\u21b3 zone-break test: {' '.join(diffs)}")
     when = (scanned_at or latest or now().strftime("%I:%M %p")).lstrip("0")
-    head = f"Trend board -- fresh scan at {when} ET (same scan as the app's Scan now)"
-    return head + "\n" + "\n".join(lines) + "\nD / 4H / 1H from closed candles. 2 of 3 sets the direction."
+    out = [f"\U0001f4ca <b>Trend board</b> \u00b7 {esc(when)} ET"]
+    if len(holidays) == 1 and len(next(iter(holidays.values()))) == len(PAIRS):
+        out.append(f"\u26aa No trading today: {esc(next(iter(holidays)))}")
+    else:
+        for why, names in holidays.items():
+            out.append(f"\u26aa No trading today for {esc(', '.join(names))}: {esc(why)}")
+    table = [f"{'PAIR':<9}  D  4H  1H   DIRECTION"] + rows
+    out.append("<pre>" + esc("\n".join(table)) + "</pre>")
+    for pr in problems:
+        out.append("\u26a0 " + esc(pr))
+    out.append("<i>\u25b2 bullish  \u25bc bearish \u00b7 2 of 3 sets the direction \u00b7 "
+               "same scan as the app's Scan now</i>")
+    return "\n".join(out)
+
+
+def _send_html(chat: str, body_html: str, reply=None):
+    """Send pre-formatted HTML (the trend board) -- not escaped again."""
+    text = body_html + html.escape(SIGN, quote=False)
+    if DRY:
+        print("---- would post (html) ----\n" + text + "\n--------------------")
+        return
+    payload = {"chat_id": reply["chat_id"] if reply else notifier._chat_id(chat), "text": text,
+               "parse_mode": "HTML", "disable_notification": True}
+    if reply:
+        payload["reply_to_message_id"] = reply["message_id"]
+    notifier._call("sendMessage", payload)
 
 
 def job_board(s):
-    post(trend_board(), chats=("setups",))
+    _send_html("setups", trend_board())
 
 
 def job_disagreements(s):
@@ -405,7 +431,9 @@ def job_requests(s):
         try:
             from modules import agent_reviewer, trade_tracker
             if kind == "trends":
-                text = trend_board()
+                _send_html(None, trend_board(), reply={"chat_id": req.get("chat_id"),
+                                                       "message_id": req.get("reply_to")})
+                continue
             elif kind == "oil report":
                 data = f"TIME: {now():%A %b %d, %I:%M %p} ET\n" + trade_tracker.oil_week_data(PAIRS)
                 text = agent_reviewer.compose("weekly oil report", data)
@@ -421,7 +449,8 @@ def job_requests(s):
             print("---- would reply ----\n" + text + "\n--------------------")
             continue
         notifier._call("sendMessage", {
-            "chat_id": req.get("chat_id"), "text": html.escape(text, quote=False) + SIGN,
+            "chat_id": req.get("chat_id"), "text": html.escape(text, quote=False) + html.escape(SIGN, quote=False),
+            "parse_mode": "HTML",          # the text is HTML-escaped: say so, or "->" shows as "-&gt;"
             "reply_to_message_id": req.get("reply_to"),
         })
 
