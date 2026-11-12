@@ -301,6 +301,74 @@ def job_summary(s):
     job_update(s, "recap")
 
 
+TF_SHORT = {"bullish": "bull", "bearish": "bear"}
+
+
+def _fresh_scan_rows() -> tuple:
+    """Exactly what the Streamlit app's "Scan now" button does: a fresh
+    run_scan for every pair, right now. Returns ({pair: outcome-line}, time)."""
+    from modules.scan_engine import run_scan, trading_day_block_reason
+    rows = {}
+    for pair in PAIRS:
+        # like the app: scan even on a holiday, just flag it
+        why = trading_day_block_reason(pair)
+        try:
+            rows[pair] = {"outcome": status.summarize(run_scan(pair, render_chart_image=False)),
+                          "holiday": why or ""}
+        except Exception as e:
+            rows[pair] = {"outcome": status.short(f"scan failed: {e}"), "holiday": why or ""}
+    return rows, now().strftime("%I:%M %p")
+
+
+def trend_board(fresh: bool = True) -> str:
+    """Nov 11: the Streamlit app's system in Telegram -- a fresh scan of every
+    pair (same run_scan the app's "Scan now" calls) laid out like the app,
+    plus the zone-break shadow's read where it differs."""
+    import csv as _csv
+    import re as _re
+    if fresh:
+        pairs, scanned_at = _fresh_scan_rows()
+    else:
+        pairs, scanned_at = status.pairs_today(), ""
+    shadow = {}
+    path = status.DIR / f"shadow_{now():%Y-%m-%d}.csv"
+    if path.exists():
+        for r in _csv.DictReader(path.open(encoding="utf-8")):
+            shadow[r["pair"]] = r          # latest row per pair
+    lines, latest = [], ""
+    for pair in PAIRS:
+        p = pairs.get(pair) or {}
+        out, at = p.get("outcome", ""), p.get("time", "")
+        latest = max(latest, at) if at else latest
+        name = pair.replace("_", "/")
+        m = _re.search(r"trend D/4H/1H (\w+)/(\w+)/(\w+) \| direction ([\w ()-]+?)(?: \||$)", out)
+        if not m:
+            why = out[:60] if out else "no scan yet"
+            lines.append(f"\u26aa {name:8} {why}")
+            continue
+        d, h4, h1, direction = m.groups()
+        direction = direction.split()[0]
+        mark = {"bullish": "\U0001f7e2", "bearish": "\U0001f534"}.get(direction, "\u26aa")
+        dir_txt = direction.upper() if direction in ("bullish", "bearish") else "NO DIRECTION"
+        if p.get("holiday"):
+            mark, dir_txt = "\u26aa", dir_txt + "  (no trading today: " + p["holiday"] + ")"
+        lines.append(f"{mark} {name:8} D {TF_SHORT.get(d, d):4} 4H {TF_SHORT.get(h4, h4):4} "
+                     f"1H {TF_SHORT.get(h1, h1):4} -> {dir_txt}")
+        sh = shadow.get(pair)
+        if sh:
+            diffs = [f"{tf} {TF_SHORT.get(sh[k], sh[k])}" for tf, k, live in
+                     (("D", "fix_d", d), ("4H", "fix_h4", h4), ("1H", "fix_h1", h1)) if sh[k] != live]
+            if diffs:
+                lines.append(f"      zone-break test: {', '.join(diffs)}")
+    when = (scanned_at or latest or now().strftime("%I:%M %p")).lstrip("0")
+    head = f"Trend board -- fresh scan at {when} ET (same scan as the app's Scan now)"
+    return head + "\n" + "\n".join(lines) + "\nD / 4H / 1H from closed candles. 2 of 3 sets the direction."
+
+
+def job_board(s):
+    post(trend_board(), chats=("setups",))
+
+
 def job_disagreements(s):
     """Nov 3 call: after the session, Chad reports every post where the team or
     he disagreed with the bot (or each other), what rule it comes down to, and a
@@ -336,7 +404,9 @@ def job_requests(s):
         print(f"CHAD: {who} asked for a {kind}")
         try:
             from modules import agent_reviewer, trade_tracker
-            if kind == "oil report":
+            if kind == "trends":
+                text = trend_board()
+            elif kind == "oil report":
                 data = f"TIME: {now():%A %b %d, %I:%M %p} ET\n" + trade_tracker.oil_week_data(PAIRS)
                 text = agent_reviewer.compose("weekly oil report", data)
             else:
@@ -369,8 +439,14 @@ def job_oil_report(s):
     post(text)
 
 
+def _scanned_since_nine() -> bool:
+    """The watcher has written at least one scan after 9:00 AM today."""
+    times = [p.get("time", "") for p in status.pairs_today().values()]
+    return any(t.endswith("AM") and t[:2] in ("09", "10", "11") or t.endswith("PM") for t in times)
+
+
 JOBS = {"morning": job_morning, "check": job_check, "update": job_update, "summary": job_summary,
-        "oilreport": job_oil_report, "disagreements": job_disagreements}
+        "oilreport": job_oil_report, "disagreements": job_disagreements, "board": job_board}
 
 
 # ------------------------------------------------------------------ loop
@@ -414,6 +490,10 @@ def main():
                     job_morning(s)
                 if (8, 50) <= hm <= (13, 2):
                     job_check(s)
+                if hm >= (9, 6) and "board" not in s["done"] and hm < (13, 0) and _scanned_since_nine():
+                    s["done"].append("board")
+                    save_state(s)
+                    job_board(s)
                 if t.weekday() == 0 and hm >= (8, 50) and "oilreport" not in s["done"] and hm < (13, 0):
                     s["done"].append("oilreport")
                     save_state(s)

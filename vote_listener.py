@@ -219,7 +219,8 @@ def _confirm_rule(msg: dict, text: str) -> bool:
 
 
 REQUEST_RE = re.compile(
-    r"\bmid[\s-]?market\s+update\b|\bmarket\s+update\b|\bchad\b[\s,:!-]*(update|recap|oil\s+report)\b", re.I)
+    r"\bmid[\s-]?market\s+update\b|\bmarket\s+update\b|\btrend\s+board\b"
+    r"|\bchad\b[\s,:!-]*(update|recap|oil\s+report|trends?|trend\s+board)\b", re.I)
 REQUESTS_FILE = Path("status") / "chad_requests.jsonl"
 
 
@@ -230,8 +231,9 @@ def _request_update(msg: dict, text: str) -> bool:
     m = REQUEST_RE.search(text)
     if not m:
         return False
-    word = (m.group(1) or "update").lower()
-    kind = "oil report" if "oil" in word else ("recap" if word == "recap" else "update")
+    word = (m.group(1) or ("trends" if "trend" in m.group(0).lower() else "update")).lower()
+    kind = ("oil report" if "oil" in word else "recap" if word == "recap"
+            else "trends" if "trend" in word else "update")
     who = _voter_name(msg.get("from") or {})
     REQUESTS_FILE.parent.mkdir(exist_ok=True)
     with REQUESTS_FILE.open("a", encoding="utf-8") as fh:

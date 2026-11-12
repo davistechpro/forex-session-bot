@@ -59,6 +59,26 @@ REVERT:   exact command
 
 ---
 
+## 2026-11-11  Trend board in Telegram
+TAG:      trend-board-2026-11-11   (previous: zone-break-shadow-2026-11-11)
+WHAT:     Chad posts a trend board: a FRESH scan of every pair, the same
+          run_scan the Streamlit app's "Scan now" calls, laid out like the
+          app (Daily/4H/1H + direction; holidays still scanned, marked ⚪).
+          Once at ~9:06 in the setups chat, and on request: "Chad, trends" /
+          "trend board". Where the zone-break shadow reads a timeframe
+          differently it adds a "zone-break test:" line. Purpose: compare the
+          app and Telegram button-press for button-press to pin down where the
+          trend discrepancy the team sees comes from (stale earlier posts vs
+          a different setup/price feed).
+WHY:      Nov 11: the team wants the Streamlit app's view in Telegram.
+          Checked first: at the same moment the app and the bot give the
+          same trends (21 of 21 matched, Nov 11 21:43 vs 21:56) -- same code.
+          The board shows the app's view; it does not change any trend call.
+AFFECTS:  Trade decisions: no. One extra silent message per day.
+REVERT:   git checkout zone-break-shadow-2026-11-11 -- chad.py vote_listener.py
+
+---
+
 ## 2026-11-11  Zone-break trend rule in SHADOW (live trading unchanged)
 TAG:      zone-break-shadow-2026-11-11   (previous: a70abea + 0fd638d)
 WHAT:     The Nov 10 "push fixes" (v2) did NOT fix the flagged posts:
