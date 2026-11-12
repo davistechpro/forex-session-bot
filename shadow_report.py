@@ -36,7 +36,6 @@ for (pair, ld, fd, fz, fe), rs in runs.items():
           f"{first['live_zone'] or 'no zone'}  {first['live_entry']}")
     print(f"  fix : {fd.upper():8} D/4H/1H {first['fix_d']}/{first['fix_h4']}/{first['fix_h1']}  "
           f"{fz or 'no zone'}  {fe}")
-    print(f"  fix A alone -> {first['a_only']}, fix B alone -> {first['b_only']}")
     for part in first["why_fix"].split(" | "):
         print(f"    {part}")
     print()

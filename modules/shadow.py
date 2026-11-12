@@ -14,7 +14,8 @@ one quiet line in the Chad chat, once per change per pair:
                   fix  BULLISH -- no short (D BULL / 4H bear / 1H bull)
                   Daily: bullish, push demand 211.20-211.95 Wed Nov 04 ...
 
-Turn off with SHADOW_TREND=off in .env.
+SHADOW_TREND in .env picks the version (b1-b4 zone-break rule, v2 push fixes;
+default b1) or turns it off (SHADOW_TREND=off).
 `py shadow_report.py [DATE]` prints the day's differences next to the team's votes.
 """
 import csv
@@ -27,7 +28,7 @@ import pytz
 
 import modules.scan_engine as se
 from modules import notifier, status
-from modules.trend_v2 import determine_trend_v2, explain
+from modules.trend_v2 import determine_trend_v2, explain, trend_for
 
 NY = pytz.timezone("America/New_York")
 FIELDS = ["at_et", "pair",
@@ -39,8 +40,16 @@ _queue = []
 _last_note = {}
 
 
+def mode() -> str:
+    """SHADOW_TREND in .env: off, or which trend version to shadow.
+    b1-b4 = zone-break rule versions (Nov 11), v2 = push fixes. Default b1."""
+    m = os.getenv("SHADOW_TREND", "b1").strip()
+    m = {"on": "b1", "1": "b1", "true": "b1", "yes": "b1"}.get(m.lower(), m)
+    return m
+
+
 def enabled() -> bool:
-    return os.getenv("SHADOW_TREND", "on").strip().lower() not in ("off", "0", "false", "no")
+    return mode().lower() not in ("off", "0", "false", "no")
 
 
 @contextmanager
@@ -104,7 +113,7 @@ def _direction(frames, pair, fixes):
 def _scan_with(pair, fixes):
     real_get, real_trend = se.get_candles, se.determine_trend
     se.get_candles = lambda p, tf, count=200: _frames[(p, tf)].tail(count).reset_index(drop=True)
-    se.determine_trend = lambda c, tf="": determine_trend_v2(c, tf, fixes)
+    se.determine_trend = trend_for(fixes)
     try:
         return se.run_scan(pair, render_chart_image=False)
     finally:
@@ -116,10 +125,12 @@ def compare(pair: str, live: dict):
     if not enabled() or not live or not _frames:
         return
     try:
-        fix = _scan_with(pair, "AB")
-        dirs = {f: _direction(_frames, pair, f) for f in ("A", "B")}
+        fix = _scan_with(pair, mode())
+        dirs = {"A": "", "B": ""}
+        # Nov 11: any timeframe trend that differs counts -- the team checks trend calls
         different = (live.get("valid_direction") != fix.get("valid_direction")
-                     or _zone(live) != _zone(fix) or _entry(live) != _entry(fix))
+                     or _zone(live) != _zone(fix) or _entry(live) != _entry(fix)
+                     or any(_tr(live, k) != _tr(fix, k) for k in ("daily_trend", "h4_trend", "h1_trend")))
         why_live = " | ".join(f"{n}: {explain(live.get(k))}" for n, k in
                               (("D", "daily_trend"), ("4H", "h4_trend"), ("1H", "h1_trend")))
         why_fix = " | ".join(f"{n}: {explain(fix.get(k))}" for n, k in
@@ -148,7 +159,8 @@ def compare(pair: str, live: dict):
 
 
 def _note(pair, live, fix):
-    sig = (live.get("valid_direction"), fix.get("valid_direction"), _zone(fix), _entry(fix))
+    sig = (live.get("valid_direction"), fix.get("valid_direction"), _zone(fix), _entry(fix),
+           tuple(_tr(fix, k) for k in ("daily_trend", "h4_trend", "h1_trend")))
     if _last_note.get(pair) == sig or not notifier.chad_chat_configured():
         return
     _last_note[pair] = sig
@@ -160,11 +172,12 @@ def _note(pair, live, fix):
         z = _zone(r) or "no zone"
         return f"{tag} {(d or 'none').upper()} {side} (D/4H/1H {t}) {z}; {_entry(r) or 'no trigger'}"
 
+
     changed = [n for n, k in (("Daily", "daily_trend"), ("4H", "h4_trend"), ("1H", "h1_trend"))
                if _tr(live, k) != _tr(fix, k)]
     why = "; ".join(f"{n}: {explain(fix.get(k))}" for n, k in
                     (("Daily", "daily_trend"), ("4H", "h4_trend"), ("1H", "h1_trend")) if n in changed)
-    text = (f"SHADOW {pair.replace('_', '/')} {datetime.now(NY):%I:%M %p}\n"
+    text = (f"SHADOW ({mode()}) {pair.replace('_', '/')} {datetime.now(NY):%I:%M %p}\n"
             f"{line('live:', live)}\n{line('fix: ', fix)}"
             + (f"\nWhy: {why}" if why else ""))
     notifier.send_message(text, chat="chad", silent=True)

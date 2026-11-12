@@ -88,8 +88,74 @@ def explain(t: dict) -> str:
         return "unclear (no zones)"
     et = lambda x: pd.Timestamp(x).tz_convert("America/New_York").strftime("%a %b %d %I:%M %p")
     d = t["detail"]
+    if t["signal_type"] == "break":
+        z = d["zone"]
+        word = "above" if z["type"] == "supply" else "below"
+        return (f"{t['trend']}: body closed {word} {z['type']} {z['bottom']}-{z['top']} "
+                f"at {et(d['break_time'])} (close {d['close']})")
     if t["signal_type"] == "push":
         return f"{t['trend']}: push {d['type']} {d['bottom']}-{d['top']} at {et(d['confirmed_time'])}"
     z = d["zone"]
     return (f"{t['trend']}: rejection at {z['type']} {z['bottom']}-{z['top']} "
             f"(touch {et(d['touch_time'])}, rejected {et(d['rejection_time'])})")
+
+
+# ====================================================================== zone-break trend (Nov 11)
+#
+# The team's rule (recorded Sept, restated by Devin Nov 11): a timeframe's
+# direction is set by a candle BODY CLOSE through a zone -- above a supply =
+# bullish, below a demand = bearish -- and holds until the opposite break.
+# The live bot (modules/trend.py) instead uses the most recent zone that
+# FORMED, which is why its Daily/4H/1H calls disagree with the team.
+#
+# Two details aren't settled, so there are four versions, scored against the
+# team's calls by replay_check (TEAM CHECK) before anyone picks one:
+#   b1  any zone not broken yet          no rejections
+#   b2  any zone not broken yet          + rejections (touch must enter the zone)
+#   b3  only the most recent zone        no rejections
+#   b4  only the most recent zone        + rejections
+# "Most recent" = the newest supply (or demand) zone that had formed when the
+# break happened; an older zone broken after a newer one formed doesn't count.
+
+BREAK_MODES = {"b1": ("any", False), "b2": ("any", True), "b3": ("recent", False), "b4": ("recent", True)}
+
+
+def _breaks(candles: pd.DataFrame, zones: list, scope: str) -> list:
+    """One event per zone: the first candle whose body closes through it."""
+    out = []
+    by_type = {"supply": sorted([z for z in zones if z["type"] == "supply"], key=lambda z: z["confirmed_time"]),
+               "demand": sorted([z for z in zones if z["type"] == "demand"], key=lambda z: z["confirmed_time"])}
+    for ztype, zs in by_type.items():
+        for i, z in enumerate(zs):
+            after = candles[candles["time"] > z["confirmed_time"]]
+            hit = after[after["close"] > z["top"]] if ztype == "supply" else after[after["close"] < z["bottom"]]
+            if hit.empty:
+                continue
+            bt = hit["time"].iloc[0]
+            if scope == "recent" and i + 1 < len(zs) and zs[i + 1]["confirmed_time"] < bt:
+                continue          # a newer zone of this type had formed: this one isn't the reference
+            out.append({"zone": z, "direction": "bullish" if ztype == "supply" else "bearish",
+                        "break_time": bt, "close": float(hit["close"].iloc[0])})
+    return out
+
+
+def determine_trend_breaks(candles: pd.DataFrame, timeframe_label: str = "", mode: str = "b1") -> dict:
+    scope, with_rej = BREAK_MODES[mode]
+    candles = candles.reset_index(drop=True)
+    zones = detect_zones(candles, timeframe_label=timeframe_label)
+    events = [(b["break_time"], "break", b["direction"], b) for b in _breaks(candles, zones, scope)]
+    if with_rej:
+        events += [(r["rejection_time"], "rejection", r["direction"], r)
+                   for r in _rejections(candles, zones, strict_touch=True)]
+    if not events:
+        return {"trend": "unclear", "signal_type": None, "event_time": None, "detail": None}
+    t, kind, direction, detail = max(events, key=lambda e: e[0])
+    return {"trend": direction, "signal_type": kind, "event_time": t, "detail": detail}
+
+
+def trend_for(mode: str):
+    """mode -> a determine_trend-compatible function (for replay and shadow)."""
+    if mode in BREAK_MODES:
+        return lambda c, tf="": determine_trend_breaks(c, tf, mode)
+    fixes = "AB" if mode == "v2" else mode
+    return lambda c, tf="": determine_trend_v2(c, tf, fixes)

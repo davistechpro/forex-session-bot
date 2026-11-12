@@ -54,7 +54,7 @@ if session["active"]:
 else:
     st.warning(f"Outside trading window (9:00 AM-12:59 PM ET) — currently {session['current_time_et']}")
 
-st.caption("Trend hierarchy: 4H is main reference, drops to 1H if 4H is unclear. Includes push + rejection (engulfing + volume) signals.")
+st.caption("Trend: 2-of-3 agreement across Daily / 4H / 1H. Same scan code as the Telegram bot.")
 
 if st.button("Scan now", type="primary"):
     progress = st.progress(0, text="Starting scan...")
@@ -124,7 +124,7 @@ if "last_results" in st.session_state:
                 st.success(
                     f"**{entry['direction']} @ {entry['entry_price']:.5f}**  \n"
                     f"SL: {entry['stop_loss']:.5f}  |  TP: {entry['take_profit']:.5f}  \n"
-                    f"Trigger: {entry['timeframe']} wick tap at {entry['time']}"
+                    f"Trigger: {entry.get('method', 'entry')} at {entry.get('time')}"
                 )
             elif zone:
                 st.info("No wick tap into the zone during the trading window yet.")

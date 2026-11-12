@@ -20,7 +20,9 @@ Trend v2 (Nov 10, shadow until confirmed):
   py replay_check.py --trend v2              replay with the trend fix
   py replay_check.py --compare NAME --trend v2   fix vs a saved baseline
   py replay_check.py --why GBP_JPY 2026-11-09 09:00
-                                             why each timeframe got its trend, live vs fix
+                                             why each timeframe got its trend, every version
+  py replay_check.py --score                 every trend version vs the team's calls, one table
+  --trend b1|b2|b3|b4                        zone-break rule versions (Nov 11), see trend_v2.py
 
 Reference days can carry the team's read ("expect"); every run ends with a
 TEAM CHECK: how many of those the current logic gets right.
@@ -45,7 +47,7 @@ load_dotenv()
 import modules.data_feed as data_feed  # noqa: E402
 import modules.scan_engine as se  # noqa: E402
 from modules.trend import determine_trend as _live_trend  # noqa: E402
-from modules.trend_v2 import determine_trend_v2, explain  # noqa: E402
+from modules.trend_v2 import determine_trend_v2, explain, trend_for, BREAK_MODES  # noqa: E402
 
 NY = pytz.timezone("America/New_York")
 ROOT = Path(__file__).resolve().parent
@@ -163,12 +165,53 @@ def replay(pair, day):
 
 
 def use_trend(mode: str):
-    """'live' = modules/trend.py, 'v2' = both fixes, 'A'/'B' = one fix."""
-    if mode == "live":
-        se.determine_trend = _live_trend
-    else:
-        fixes = "AB" if mode == "v2" else mode
-        se.determine_trend = lambda c, tf="": determine_trend_v2(c, tf, fixes)
+    """'live' = modules/trend.py, 'v2'/'A'/'B' = push fixes, 'b1'-'b4' = zone-break rule."""
+    se.determine_trend = _live_trend if mode == "live" else trend_for(mode)
+
+
+MODES = ["live", "v2", "b1", "b2", "b3", "b4"]
+MODE_NAMES = {"live": "live bot (zone formed)", "v2": "push fixes A+B",
+              "b1": "break, any zone", "b2": "break, any zone + rejections",
+              "b3": "break, most recent zone", "b4": "break, most recent zone + rejections"}
+
+
+def _trends_at(pair, day, hhmm, fn):
+    t = NY.localize(datetime.strptime(f"{day} {hhmm}", "%Y-%m-%d %H:%M"))
+    now_utc = pd.Timestamp(t).tz_convert("UTC")
+    out = {}
+    for tf, label, n in (("D", "D", 60), ("H4", "4H", 120), ("H1", "1H", 200)):
+        df = frozen(pair, day, tf)
+        df = df[df["time"] + pd.Timedelta(minutes=TF_MIN[tf]) <= now_utc].tail(n).reset_index(drop=True)
+        out[label] = fn(df, tf)
+    return out
+
+
+def score_all():
+    """One table: every trend version vs the team's calls on the reference days."""
+    days = [d for d in load_days() if d.get("expect")]
+    if not days:
+        raise SystemExit("No reference days with the team's read (\"expect\") yet.")
+    totals = {m: [0, 0] for m in MODES}
+    print("Team's calls vs each trend version (OK = matches the team)\n")
+    for d in days:
+        e = d["expect"]
+        print(f"{d['pair']} {d['day']} {e['time']}   team: " +
+              ", ".join(f"{tf} {v}" for tf, v in e["trends"].items()))
+        for m in MODES:
+            fn = _live_trend if m == "live" else trend_for(m)
+            got = _trends_at(d["pair"], d["day"], e["time"], fn)
+            marks = []
+            for tf, want in e["trends"].items():
+                g = got[tf]["trend"]
+                totals[m][1] += 1
+                totals[m][0] += g == want
+                marks.append(f"{tf} {g}{'' if g == want else ' X'}")
+            print(f"   {m:4} {', '.join(marks)}")
+        print()
+    print("SCORE")
+    for m in MODES:
+        h, n = totals[m]
+        print(f"   {m:4} {h:2} of {n}   {MODE_NAMES[m]}")
 
 
 def run_all():
@@ -222,10 +265,10 @@ def why(pair, day, hhmm):
         live = _live_trend(df, tf)
         print(f"{label:5}  price {last}")
         print(f"   live : {explain(live)}")
-        for f, name in (("A", "fix A (touch)"), ("B", "fix B (push)"), ("AB", "fix A+B")):
-            v = determine_trend_v2(df, tf, f)
+        for m in ("v2", "b1", "b2", "b3", "b4"):
+            v = trend_for(m)(df, tf)
             flag = "" if v["trend"] == live["trend"] else "   <-- CHANGED"
-            print(f"   {name:13}: {explain(v)}{flag}")
+            print(f"   {m:4} : {explain(v)}{flag}")
         print()
 
 
@@ -237,12 +280,16 @@ def main():
     ap.add_argument("--compare", metavar="NAME")
     ap.add_argument("--add", nargs=3, metavar=("PAIR", "DAY", "WHY"))
     ap.add_argument("--list", action="store_true")
-    ap.add_argument("--trend", default="live", choices=["live", "v2", "A", "B"])
+    ap.add_argument("--trend", default="live", choices=["live", "v2", "A", "B", "b1", "b2", "b3", "b4"])
+    ap.add_argument("--score", action="store_true", help="score every trend version against the team's calls")
     ap.add_argument("--why", nargs=3, metavar=("PAIR", "DAY", "HH:MM"))
     a = ap.parse_args()
 
     if a.why:
         why(a.why[0].upper(), a.why[1], a.why[2])
+        return
+    if a.score:
+        score_all()
         return
     use_trend(a.trend)
     if a.trend != "live":

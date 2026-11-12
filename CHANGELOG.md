@@ -59,6 +59,37 @@ REVERT:   exact command
 
 ---
 
+## 2026-11-11  Zone-break trend rule in SHADOW (live trading unchanged)
+TAG:      zone-break-shadow-2026-11-11   (previous: a70abea + 0fd638d)
+WHAT:     The Nov 10 "push fixes" (v2) did NOT fix the flagged posts:
+          replay of the 5 posts gave the same trend as live (3 of 10 team
+          calls matched either way). Root cause: the bot reads trend from the
+          most recent zone that FORMED; the team's rule (recorded Sept,
+          restated Nov 11) is a candle BODY CLOSE through a zone -- above
+          supply = bullish, below demand = bearish -- holding until the
+          opposite break. `modules/trend_v2.py` now has that rule in four
+          versions (b1 any unbroken zone, b2 + rejections, b3 most recent zone
+          only, b4 + rejections). `replay_check.py --score` scores live, v2 and
+          b1-b4 against every team call in one table; `--why` shows all of
+          them. Shadow runs the version in SHADOW_TREND (.env, default b1) and
+          now posts in the Chad chat whenever any timeframe's trend differs.
+          Dashboard: fixed the crash on "TRADE FOUND" (entry has no
+          'timeframe' field) and the out-of-date trend caption.
+WHY:      Gage + Steven Nov 5-9; Devin Nov 11 ("the breaking points of a
+          supply and demand zone [identify the trend]").
+AFFECTS:  Trade decisions: NO. Live trend still modules/trend.py.
+OPEN:     Which version is the rule (any vs most recent zone; rejections or
+          not) is the team's call -- the --score table is evidence, not the
+          decision.
+REVERT:   git checkout a70abea -- modules/trend_v2.py modules/shadow.py replay_check.py shadow_report.py dashboard/app.py
+
+### 2026-11-11  Dashboard: six package
+COMMIT:   0fd638d (Devin). Streamlit Cloud rebuilt on Python 3.14 and the OANDA
+          library no longer pulled in `six`; app crashed on load.
+AFFECTS:  Dashboard only.
+
+---
+
 ## 2026-11-10  Trend v2 in SHADOW (live trading unchanged)
 TAG:      shadow-trend-2026-11-10   (previous: chad-v1-2026-11-03)
 WHAT:     `modules/trend_v2.py` = the live trend rule plus two fixes:
