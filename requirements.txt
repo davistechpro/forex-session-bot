@@ -14,3 +14,4 @@ streamlit
 mplfinance
 # Timezones
 pytz
+six
